@@ -1,6 +1,7 @@
 # OpenGuider
 
 Download [here](https://mo-tunn.github.io/OpenGuider/)
+Buy me a [coffe](https://ppr.ist/2ndBJ4YRz)
 
 <p align="center">
   <img src="./renderer/assets/logo.png" alt="OpenGuider logo" width="150">

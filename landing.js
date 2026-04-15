@@ -56,7 +56,7 @@ const GITHUB_REPO_URL = "https://github.com/mo-tunn/OpenGuider";
 const GITHUB_LATEST_RELEASE_URL = `${GITHUB_REPO_URL}/releases/latest`;
 const downloads = [
   { os: "Windows", href: `${GITHUB_LATEST_RELEASE_URL}/download/OpenGuider-windows-latest.exe` },
-  { os: "MacOS", href: `${GITHUB_LATEST_RELEASE_URL}/download/OpenGuider-macos-latest.dmg` },
+  { os: "MacOS", href: `${GITHUB_LATEST_RELEASE_URL}/download/OpenGuider-macos-latest.zip` },
   { os: "Linux", href: `${GITHUB_LATEST_RELEASE_URL}/download/OpenGuider-linux-latest.AppImage` }
 ];
 

@@ -3,6 +3,8 @@
 Download [here](https://mo-tunn.github.io/OpenGuider/)
 Buy me a [coffe](https://ppr.ist/2ndBJ4YRz)
 
+[![Buy Me a Coffe](https://img.shields.io/badge/Buy%20me%20a-coffe-ff813f?logo=buymeacoffee&logoColor=white)](https://ppr.ist/2ndBJ4YRz)
+
 <p align="center">
   <img src="./renderer/assets/logo.png" alt="OpenGuider logo" width="150">
 </p>

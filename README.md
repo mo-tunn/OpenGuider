@@ -1,9 +1,8 @@
 # OpenGuider
 
 Download [here](https://mo-tunn.github.io/OpenGuider/)
-Buy me a [coffe](https://ppr.ist/2ndBJ4YRz)
 
-[![Buy Me a Coffe](https://img.shields.io/badge/Buy%20me%20a-coffe-ff813f?logo=buymeacoffee&logoColor=white)](https://ppr.ist/2ndBJ4YRz)
+
 
 <p align="center">
   <img src="./renderer/assets/logo.png" alt="OpenGuider logo" width="150">
@@ -14,6 +13,7 @@ Buy me a [coffe](https://ppr.ist/2ndBJ4YRz)
 ![Tests](https://img.shields.io/github/actions/workflow/status/mo-tunn/OpenGuider/multi-platform-test.yml?branch=main&label=tests)
 ![Latest Release](https://img.shields.io/github/v/release/mo-tunn/OpenGuider?label=latest%20release)
 ![License](https://img.shields.io/github/license/mo-tunn/OpenGuider)
+[![Buy Me a Coffe](https://img.shields.io/badge/Buy%20me%20a-coffe-ff813f?logo=buymeacoffee&logoColor=white)](https://ppr.ist/2ndBJ4YRz)
 
 OpenGuider is an Electron desktop AI assistant designed to help you complete real UI tasks on your machine.
 

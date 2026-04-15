@@ -34,10 +34,14 @@ jobs:
 
       - name: Build macOS artifact
         if: matrix.os == 'macos-latest'
-        run: npx electron-builder --mac zip
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: npx electron-builder --mac zip --config.mac.identity=null
 
       - name: Build Linux artifact
         if: matrix.os == 'ubuntu-latest'
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
         run: npx electron-builder --linux zip
 
       - name: Upload release artifacts

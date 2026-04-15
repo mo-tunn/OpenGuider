@@ -38,7 +38,7 @@ jobs:
 
       - name: Build Linux artifact
         if: matrix.os == 'ubuntu-latest'
-        run: npx electron-builder --linux AppImage
+        run: npx electron-builder --linux zip
 
       - name: Upload release artifacts
         uses: actions/upload-artifact@v4
@@ -67,20 +67,20 @@ jobs:
           mkdir -p artifacts/aliases
 
           WINDOWS_EXE="$(find artifacts -type f -name '*.exe' ! -name '*unins*' | head -n 1)"
-          MACOS_ZIP="$(find artifacts -type f -name '*.zip' | head -n 1)"
-          LINUX_APPIMAGE="$(find artifacts -type f -name '*.AppImage' | head -n 1)"
+          MACOS_ZIP="$(find artifacts -type f -name '*mac*.zip' | head -n 1)"
+          LINUX_ZIP="$(find artifacts -type f -name '*linux*.zip' | head -n 1)"
 
-          if [ -z "${WINDOWS_EXE}" ] || [ -z "${MACOS_ZIP}" ] || [ -z "${LINUX_APPIMAGE}" ]; then
+          if [ -z "${WINDOWS_EXE}" ] || [ -z "${MACOS_ZIP}" ] || [ -z "${LINUX_ZIP}" ]; then
             echo "Could not locate one or more platform installer files."
             echo "WINDOWS_EXE=${WINDOWS_EXE:-missing}"
             echo "MACOS_ZIP=${MACOS_ZIP:-missing}"
-            echo "LINUX_APPIMAGE=${LINUX_APPIMAGE:-missing}"
+            echo "LINUX_ZIP=${LINUX_ZIP:-missing}"
             exit 1
           fi
 
           cp "${WINDOWS_EXE}" artifacts/aliases/OpenGuider-windows-latest.exe
           cp "${MACOS_ZIP}" artifacts/aliases/OpenGuider-macos-latest.zip
-          cp "${LINUX_APPIMAGE}" artifacts/aliases/OpenGuider-linux-latest.AppImage
+          cp "${LINUX_ZIP}" artifacts/aliases/OpenGuider-linux-latest.zip
 
       - name: Publish release with artifacts
         uses: softprops/action-gh-release@v2
@@ -92,5 +92,5 @@ jobs:
             Download installers:
             - Windows: OpenGuider-windows-latest.exe
             - macOS: OpenGuider-macos-latest.zip
-            - Linux: OpenGuider-linux-latest.AppImage
+            - Linux: OpenGuider-linux-latest.zip
           files: artifacts/**/*

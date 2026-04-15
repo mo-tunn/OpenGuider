@@ -1,0 +1,79 @@
+name: Build Release Artifacts
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build platform artifacts
+        run: npm run dist
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: openguider-${{ matrix.os }}
+          path: release/**
+
+  publish:
+    name: Publish GitHub Release
+    runs-on: ubuntu-latest
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create stable latest asset aliases
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/aliases
+
+          WINDOWS_EXE="$(find artifacts -type f -name '*.exe' ! -name '*unins*' | head -n 1)"
+          MACOS_DMG="$(find artifacts -type f -name '*.dmg' | head -n 1)"
+          LINUX_APPIMAGE="$(find artifacts -type f -name '*.AppImage' | head -n 1)"
+
+          if [ -z "${WINDOWS_EXE}" ] || [ -z "${MACOS_DMG}" ] || [ -z "${LINUX_APPIMAGE}" ]; then
+            echo "Could not locate one or more platform installer files."
+            echo "WINDOWS_EXE=${WINDOWS_EXE:-missing}"
+            echo "MACOS_DMG=${MACOS_DMG:-missing}"
+            echo "LINUX_APPIMAGE=${LINUX_APPIMAGE:-missing}"
+            exit 1
+          fi
+
+          cp "${WINDOWS_EXE}" artifacts/aliases/OpenGuider-windows-latest.exe
+          cp "${MACOS_DMG}" artifacts/aliases/OpenGuider-macos-latest.dmg
+          cp "${LINUX_APPIMAGE}" artifacts/aliases/OpenGuider-linux-latest.AppImage
+
+      - name: Publish release with artifacts
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*

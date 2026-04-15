@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenGuider</title>
+  <meta name="description" content="OpenGuider helps you complete tasks with guided AI planning, voice control, and pointer assistance.">
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="./landing.css">
+</head>
+<body>
+  <div class="background-eye-layer" aria-hidden="true">
+    <img
+      id="background-eye-logo"
+      class="background-eye-logo"
+      src="../renderer/assets/logo.png"
+      alt=""
+    >
+  </div>
+
+  <div class="cursor-wrap" id="cursor-wrap" aria-hidden="true">
+    <div class="ai-cursor" id="cursor">
+      <div class="cursor-ring"></div>
+      <div class="cursor-dot"></div>
+      <div class="ripple" id="ripple1"></div>
+      <div class="ripple2" id="ripple2"></div>
+      <div class="cursor-label" id="cursor-label">OpenGuider</div>
+    </div>
+  </div>
+
+  <header class="site-header">
+    <div class="container nav-shell">
+      <nav class="nav-pill" aria-label="Primary">
+        <a class="nav-link" href="#features">Features</a>
+        <a class="nav-link" href="#configure">Configure</a>
+        <a class="nav-link" href="#security">Security</a>
+        <a class="nav-link nav-link-accent" href="#tutorial">Tutorial</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="container hero-shell">
+        <div class="hero-grid hero-grid-single">
+          <div class="hero-copy hero-copy-wide">
+            <p class="eyebrow">Meet OpenGuider</p>
+            <img
+              class="hero-mini-logo js-logo-fallback"
+              src="../renderer/assets/logo.png"
+              alt="OpenGuider logo"
+            >
+            <h1>An AI companion that lives on your desktop.</h1>
+            <p class="lead">
+              OpenGuider watches your screen, listens to your voice, and guides every step with clear actions.
+            </p>
+          </div>
+        </div>
+        <div id="hero-downloads" class="hero-downloads hero-downloads-minimal">
+          <div id="hero-download-grid" class="download-grid hero-download-grid"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="features" id="features">
+      <div class="container features-shell">
+        <h2 class="features-title">Features</h2>
+        <div id="feature-grid" class="feature-grid"></div>
+      </div>
+    </section>
+
+    <section class="configure" id="configure">
+      <div class="container configure-shell">
+        <h2 class="configure-title">How to Configure?</h2>
+        <div class="configure-panel">
+          <div id="configure-steps" class="configure-steps" role="tablist" aria-label="Configuration steps"></div>
+          <article class="configure-preview" aria-live="polite">
+            <div class="configure-preview-head">
+              <span id="configure-step-index" class="configure-step-index">Step 1/4</span>
+              <strong id="configure-step-title">Provider Setup</strong>
+            </div>
+            <p id="configure-step-description" class="configure-step-description"></p>
+            <ul id="configure-step-list" class="configure-step-list"></ul>
+            <p id="configure-step-tip" class="configure-step-tip"></p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="tutorial" id="tutorial">
+      <div class="container tutorial-shell">
+        <h2 class="tutorial-title">Tutorial</h2>
+        <p class="tutorial-intro">OpenGuider in action.</p>
+        <img
+          class="tutorial-gif"
+          src="../tutorial.gif"
+          onerror="this.src='./tutorial.gif'"
+          alt="OpenGuider running tutorial"
+        >
+      </div>
+    </section>
+
+    <section class="security" id="security">
+      <div class="container security-shell">
+        <h2 class="security-title">Security</h2>
+        <p class="security-intro">
+          Open-source and local-first by design.
+        </p>
+        <div class="security-info-layout">
+          <article class="security-info-block">
+            <h3>How OpenGuider Handles Data</h3>
+            <ul class="security-list">
+              <li>Open-source codebase, auditable by anyone.</li>
+              <li>API keys are kept locally on your machine.</li>
+              <li>No hidden cloud relay between you and providers.</li>
+            </ul>
+          </article>
+          <article class="security-info-block">
+            <h3>Where Requests Go</h3>
+            <ul class="security-list">
+              <li>Only to providers you configure (AI, STT, TTS).</li>
+              <li>HTTPS/TLS for data in transit.</li>
+              <li>No unrelated third-party telemetry endpoint by default.</li>
+            </ul>
+          </article>
+        </div>
+        <div class="security-cta">
+          <a class="btn btn-primary security-github-btn" href="https://github.com/mo-tunn/OpenGuider" target="_blank" rel="noopener noreferrer">View on GitHub</a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <span>OpenGuider</span>
+      <span>Built by mo-tunn</span>
+    </div>
+  </footer>
+
+  <script src="./landing.js"></script>
+</body>
+</html>

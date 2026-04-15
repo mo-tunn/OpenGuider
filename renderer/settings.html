@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>OpenGuider Settings</title>
+<link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+<div class="settings-panel">
+  <div class="settings-header">
+    <div class="header-logo">⚙</div>
+    <h2>Settings</h2>
+    <button class="icon-btn" id="btn-close" style="-webkit-app-region:no-drag">✕</button>
+  </div>
+
+  <div class="settings-body">
+    <div class="settings-tabs">
+      <button class="settings-tab-btn active" data-tab="provider">AI Provider</button>
+      <button class="settings-tab-btn" data-tab="voice">Voice</button>
+      <button class="settings-tab-btn" data-tab="shortcuts">Shortcuts</button>
+    </div>
+
+    <div class="settings-tab-section active" data-tab-content="provider">
+      <div class="settings-section">
+        <h3>AI Provider</h3>
+
+        <div class="form-group">
+          <label>Provider</label>
+          <select class="form-select" id="providerSelect">
+            <option value="claude">Claude (Anthropic)</option>
+            <option value="openai">OpenAI</option>
+            <option value="gemini">Gemini (Google)</option>
+            <option value="openrouter">OpenRouter</option>
+            <option value="groq">Groq</option>
+            <option value="ollama">Ollama (Local)</option>
+          </select>
+        </div>
+
+        <div class="provider-section" id="section-claude">
+          <div class="form-group">
+            <label>API Key</label>
+            <input class="form-input password" id="claudeApiKey" type="password" placeholder="sk-ant-..."/>
+          </div>
+          <div class="form-group">
+            <label>Model Name</label>
+            <input class="form-input" id="claudeModel" type="text" placeholder="e.g. claude-sonnet-4-5"/>
+            <span class="hint">Type the exact model name (e.g. claude-opus-4-5, claude-haiku-3-5)</span>
+          </div>
+        </div>
+
+        <div class="provider-section" id="section-openai">
+          <div class="form-group">
+            <label>API Key</label>
+            <input class="form-input password" id="openaiApiKey" type="password" placeholder="sk-..."/>
+          </div>
+          <div class="form-group">
+            <label>Model Name</label>
+            <input class="form-input" id="openaiModel" type="text" placeholder="e.g. gpt-4o"/>
+            <span class="hint">Type the exact model name (e.g. gpt-4o-mini, o3-mini)</span>
+          </div>
+        </div>
+
+        <div class="provider-section" id="section-gemini">
+          <div class="form-group">
+            <label>API Key</label>
+            <input class="form-input password" id="geminiApiKey" type="password" placeholder="AIza..."/>
+          </div>
+          <div class="form-group">
+            <label>Model Name</label>
+            <input class="form-input" id="geminiModel" type="text" placeholder="e.g. gemini-2.0-flash"/>
+            <span class="hint">Type the exact model name (e.g. gemini-2.5-pro, gemini-1.5-flash)</span>
+          </div>
+        </div>
+
+        <div class="provider-section" id="section-openrouter">
+          <div class="form-group">
+            <label>OpenRouter API Key</label>
+            <input class="form-input password" id="openrouterApiKey" type="password" placeholder="sk-or-..."/>
+            <span class="hint">Get your key at <strong>openrouter.ai</strong></span>
+          </div>
+          <div class="form-group">
+            <label>Model Name</label>
+            <input class="form-input" id="openrouterModel" type="text" placeholder="e.g. google/gemini-2.0-flash-lite-preview-02-05:free"/>
+            <span class="hint">Type the exact OpenRouter model ID</span>
+          </div>
+        </div>
+
+        <div class="provider-section" id="section-groq">
+          <div class="form-group">
+            <label>Groq API Key</label>
+            <input class="form-input password" id="groqApiKey" type="password" placeholder="gsk_..."/>
+            <span class="hint">Free at <strong>console.groq.com</strong></span>
+          </div>
+          <div class="form-group">
+            <label>Model Name</label>
+            <input class="form-input" id="groqModel" type="text" placeholder="e.g. llama-3.2-11b-vision-preview"/>
+            <span class="hint">Vision models: llama-3.2-11b-vision-preview, llama-3.2-90b-vision-preview</span>
+          </div>
+        </div>
+
+        <div class="provider-section" id="section-ollama">
+          <div class="form-group">
+            <label>Ollama URL</label>
+            <input class="form-input" id="ollamaUrl" type="url" placeholder="http://localhost:11434"/>
+            <span class="hint">Ollama must be running locally. Install from <strong>ollama.ai</strong></span>
+          </div>
+          <div class="form-group">
+            <label>Model Name</label>
+            <input class="form-input" id="ollamaModel" type="text" placeholder="e.g. llama3.2"/>
+            <span class="hint">Type any locally installed model name</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-tab-section" data-tab-content="voice">
+      <div class="settings-section">
+        <h3>Voice (Speech-to-Text)</h3>
+        <div class="form-group">
+          <label>STT Provider</label>
+          <select class="form-select" id="sttProvider">
+            <option value="webspeech">Web Speech API (free, built-in)</option>
+            <option value="assemblyai">AssemblyAI Streaming (high accuracy)</option>
+            <option value="whisper">OpenAI Whisper (upload-based)</option>
+          </select>
+        </div>
+        <div class="form-group" id="assemblyKey-group">
+          <label>AssemblyAI API Key</label>
+          <input class="form-input password" id="assemblyaiApiKey" type="password" placeholder="..."/>
+        </div>
+        <div class="form-group" id="whisperKey-group" style="display:none;">
+          <label>Whisper API Key</label>
+          <input class="form-input password" id="whisperApiKey" type="password" placeholder="sk-..."/>
+          <span class="hint">Defaults to OpenAI. For Groq, enter your Groq API Key here.</span>
+        </div>
+        <div class="form-group" id="whisperApi-group" style="display:none;">
+          <label>Whisper Base URL</label>
+          <input class="form-input" id="whisperBaseUrl" type="url" placeholder="https://api.openai.com/v1"/>
+          <span class="hint">For Groq Whisper, use: <strong>https://api.groq.com/openai/v1</strong></span>
+        </div>
+        <div class="form-group" id="whisperModel-group" style="display:none;">
+          <label>Whisper Model</label>
+          <input class="form-input" id="whisperModel" type="text" placeholder="whisper-1"/>
+          <span class="hint">For Groq Whisper, use: <strong>whisper-large-v3</strong></span>
+        </div>
+        <div class="form-group">
+          <label>Language</label>
+          <select class="form-select" id="sttLanguage">
+            <option value="en-US">English (US)</option>
+            <option value="tr-TR">Turkish</option>
+            <option value="de-DE">German</option>
+            <option value="fr-FR">French</option>
+            <option value="es-ES">Spanish</option>
+            <option value="ja-JP">Japanese</option>
+            <option value="zh-CN">Chinese (Simplified)</option>
+          </select>
+        </div>
+      </div>
+      <div class="settings-section">
+        <h3>Voice (Text-to-Speech)</h3>
+        <div class="form-group">
+          <label>TTS Provider</label>
+          <select class="form-select" id="ttsProvider">
+            <option value="google">Google Translate TTS (Free &amp; Online)</option>
+            <option value="openai">OpenAI TTS (Cheap &amp; High Quality)</option>
+            <option value="elevenlabs">ElevenLabs (Premium)</option>
+          </select>
+        </div>
+        
+        <div id="openaiTts-group" style="display:none; flex-direction:column; gap:12px;">
+          <div class="form-group">
+            <label>OpenAI TTS API Key</label>
+            <input class="form-input password" id="openaiTtsApiKey" type="password" placeholder="Fallback to global OpenAI key if blank"/>
+          </div>
+          <div class="form-group">
+            <label>TTS Base URL</label>
+            <input class="form-input" id="openaiTtsBaseUrl" type="url" placeholder="https://api.openai.com/v1"/>
+          </div>
+          <div class="form-group">
+            <label>TTS Model &amp; Voice</label>
+            <div style="display:flex; gap: 8px;">
+              <input class="form-input" id="openaiTtsModel" type="text" placeholder="tts-1" style="flex:1;"/>
+              <input class="form-input" id="openaiTtsVoice" type="text" placeholder="nova" style="flex:1;"/>
+            </div>
+            <span class="hint">Voices: alloy, echo, fable, onyx, nova, shimmer</span>
+          </div>
+        </div>
+        <div class="form-group" id="elevenlabs-group">
+          <label>ElevenLabs API Key</label>
+          <input class="form-input password" id="elevenlabsApiKey" type="password" placeholder="..."/>
+        </div>
+        <div class="form-group" id="elevenlabs-voice-group">
+          <label>ElevenLabs Voice ID</label>
+          <input class="form-input" id="elevenlabsVoiceId" type="text" placeholder="EXAVITQu4vr4xnSDxMaL"/>
+        </div>
+        <div class="form-group">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" id="ttsEnabled" style="accent-color:#C65A3A"/>
+            Enable TTS responses
+          </label>
+        </div>
+        <div class="form-group">
+          <label>TTS Volume <span id="ttsVolumeValue">100%</span></label>
+          <input
+            class="form-input"
+            id="ttsVolume"
+            type="range"
+            min="0"
+            max="1"
+            step="0.05"
+            value="1"
+          />
+          <span class="hint">Controls playback volume for all TTS providers.</span>
+        </div>
+        <div class="form-group">
+          <label>TTS Speed <span id="ttsRateValue">1.50x</span></label>
+          <input
+            class="form-input"
+            id="ttsRate"
+            type="range"
+            min="1"
+            max="2"
+            step="0.05"
+            value="1.5"
+          />
+          <span class="hint">Playback speed for all TTS providers (1.0x - 2.0x).</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-tab-section" data-tab-content="shortcuts">
+      <div class="settings-section">
+        <h3>Shortcuts</h3>
+        <div class="form-group">
+          <label>Push-to-Talk Shortcut</label>
+          <div class="shortcut-row">
+            <input class="form-input shortcut-input" id="pushToTalkShortcut" type="text" placeholder="Ctrl+Shift+Space"/>
+            <button class="record-shortcut-btn" data-target-input="pushToTalkShortcut" type="button">Record</button>
+          </div>
+          <span class="hint">Restart app after changing Push-to-Talk shortcut.</span>
+        </div>
+        <div class="form-group">
+          <label>Mark as done</label>
+          <div class="shortcut-row">
+            <input class="form-input shortcut-input" id="markStepDoneShortcut" type="text" placeholder="Ctrl+Alt+1"/>
+            <button class="record-shortcut-btn" data-target-input="markStepDoneShortcut" type="button">Record</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Need help</label>
+          <div class="shortcut-row">
+            <input class="form-input shortcut-input" id="requestStepHelpShortcut" type="text" placeholder="Ctrl+Alt+2"/>
+            <button class="record-shortcut-btn" data-target-input="requestStepHelpShortcut" type="button">Record</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Re-check</label>
+          <div class="shortcut-row">
+            <input class="form-input shortcut-input" id="recheckCurrentStepShortcut" type="text" placeholder="Ctrl+Alt+3"/>
+            <button class="record-shortcut-btn" data-target-input="recheckCurrentStepShortcut" type="button">Record</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Previous step</label>
+          <div class="shortcut-row">
+            <input class="form-input shortcut-input" id="previousStepShortcut" type="text" placeholder="Ctrl+Alt+5"/>
+            <button class="record-shortcut-btn" data-target-input="previousStepShortcut" type="button">Record</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Skip step</label>
+          <div class="shortcut-row">
+            <input class="form-input shortcut-input" id="skipCurrentStepShortcut" type="text" placeholder="Ctrl+Alt+6"/>
+            <button class="record-shortcut-btn" data-target-input="skipCurrentStepShortcut" type="button">Record</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Regenerate step (Redo)</label>
+          <div class="shortcut-row">
+            <input class="form-input shortcut-input" id="regenerateCurrentStepShortcut" type="text" placeholder="Ctrl+Alt+7"/>
+            <button class="record-shortcut-btn" data-target-input="regenerateCurrentStepShortcut" type="button">Record</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Cancel plan</label>
+          <div class="shortcut-row">
+            <input class="form-input shortcut-input" id="cancelActivePlanShortcut" type="text" placeholder="Ctrl+Alt+4"/>
+            <button class="record-shortcut-btn" data-target-input="cancelActivePlanShortcut" type="button">Record</button>
+          </div>
+          <span class="hint">These shortcuts work in panel when a step is active and status is waiting user.</span>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3>Performance Telemetry</h3>
+        <div class="form-group">
+          <label>Runtime metrics (IPC + capture timings)</label>
+          <div class="shortcut-row">
+            <button class="record-shortcut-btn" id="btn-refresh-metrics" type="button">Refresh</button>
+            <button class="record-shortcut-btn" id="btn-reset-metrics" type="button">Reset</button>
+          </div>
+          <span class="hint">Use this for freeze diagnostics. Includes p95/avg timings.</span>
+        </div>
+        <pre class="metrics-box" id="metrics-output">No metrics yet.</pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="settings-footer">
+    <button class="btn-danger" id="btn-reset-all">Reset to Factory Defaults</button>
+    <button class="btn-ghost" id="btn-cancel">Cancel</button>
+    <button class="btn-primary" id="btn-save">Save Settings</button>
+  </div>
+</div>
+
+<div class="confirm-overlay hidden" id="confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+  <div class="confirm-modal">
+    <h3 id="confirm-title">Reset All Settings?</h3>
+    <p id="confirm-message">This will remove all saved settings and restore factory defaults.</p>
+    <div class="confirm-actions">
+      <button class="confirm-btn ghost" id="confirm-cancel" type="button">Cancel</button>
+      <button class="confirm-btn danger" id="confirm-confirm" type="button">Reset</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast hidden" id="toast"></div>
+<script src="js/settings.js"></script>
+</body>
+</html>

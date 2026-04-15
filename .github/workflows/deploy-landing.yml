@@ -1,0 +1,54 @@
+name: Deploy Landing Page
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Prepare static site
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p site/assets
+
+          cp landing/index.html site/index.html
+          cp landing/landing.css site/landing.css
+          cp landing/landing.js site/landing.js
+          cp landing/favicon.svg site/favicon.svg
+          cp tutorial.gif site/tutorial.gif
+
+          cp renderer/assets/logo.png site/assets/logo.png
+          cp renderer/assets/half-opened.png site/assets/half-opened.png
+          cp renderer/assets/full-closed.png site/assets/full-closed.png
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

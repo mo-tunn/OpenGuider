@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
+html, body { width:100%; height:100%; overflow:hidden; background:transparent; }
+body { pointer-events:none; }
+
+.cursor-wrap {
+  position:fixed; inset:0; pointer-events:none;
+}
+
+/* The orange cursor dot */
+.ai-cursor {
+  position:absolute;
+  width:22px; height:22px;
+  transform:translate(-50%,-50%);
+  opacity:0;
+  transition: left 0.65s cubic-bezier(0.25,0.46,0.45,0.94),
+              top  0.65s cubic-bezier(0.25,0.46,0.45,0.94),
+              opacity 0.25s ease;
+  will-change: left, top, opacity;
+}
+.ai-cursor.visible { opacity:1; }
+
+/* Outer glow ring */
+.cursor-ring {
+  position:absolute; inset:-6px;
+  border-radius:50%;
+  border:2px solid rgba(198,90,58,0.45);
+  animation:ringPulse 2s ease-in-out infinite;
+}
+@keyframes ringPulse {
+  0%,100% { transform:scale(1); opacity:0.6; }
+  50%      { transform:scale(1.4); opacity:0.2; }
+}
+
+/* Inner dot */
+.cursor-dot {
+  width:22px; height:22px;
+  background:radial-gradient(circle at 35% 35%, #f6a27a, #c65a3a);
+  border-radius:50%;
+  box-shadow:
+    0 0 0 3px rgba(198,90,58,0.3),
+    0 0 20px rgba(198,90,58,0.75),
+    0 0 40px rgba(198,90,58,0.35);
+  animation:dotPulse 1.8s ease-in-out infinite;
+}
+@keyframes dotPulse {
+  0%,100% { box-shadow:0 0 0 3px rgba(198,90,58,0.3),0 0 20px rgba(198,90,58,0.65); }
+  50%     { box-shadow:0 0 0 6px rgba(198,90,58,0.15),0 0 30px rgba(198,90,58,0.95); }
+}
+
+/* Click ripple effect */
+.ripple {
+  position:absolute;
+  inset:-4px;
+  border-radius:50%;
+  border:2px solid rgba(198,90,58,0.8);
+  opacity:0;
+  pointer-events:none;
+}
+.ripple.animate {
+  animation:rippleOut 0.6s ease-out forwards;
+}
+.ripple2 {
+  position:absolute;
+  inset:-4px;
+  border-radius:50%;
+  border:2px solid rgba(246,162,122,0.6);
+  opacity:0;
+  pointer-events:none;
+}
+.ripple2.animate {
+  animation:rippleOut 0.6s ease-out 0.15s forwards;
+}
+@keyframes rippleOut {
+  0%   { transform:scale(1); opacity:0.9; }
+  100% { transform:scale(3.5); opacity:0; }
+}
+
+/* Label bubble */
+.cursor-label {
+  position:absolute;
+  top:28px; left:50%;
+  transform:translateX(-50%);
+  white-space:nowrap;
+  background:rgba(8,9,18,0.92);
+  border:1px solid rgba(198,90,58,0.45);
+  color:#f6a27a;
+  font-family:"Inter","Segoe UI",system-ui,sans-serif;
+  font-size:12px; font-weight:600;
+  padding:5px 12px;
+  border-radius:20px;
+  backdrop-filter:blur(12px);
+  box-shadow:0 4px 16px rgba(0,0,0,0.5);
+  opacity:0;
+  transform:translateX(-50%) translateY(6px);
+  transition:opacity 0.25s ease, transform 0.25s ease;
+}
+.ai-cursor.visible .cursor-label {
+  opacity:1;
+  transform:translateX(-50%) translateY(0);
+  transition-delay:0.4s;
+}
+</style>
+</head>
+<body>
+<div class="cursor-wrap">
+  <div class="ai-cursor" id="cursor">
+    <div class="cursor-ring"></div>
+    <div class="cursor-dot"></div>
+    <div class="ripple"  id="ripple1"></div>
+    <div class="ripple2" id="ripple2"></div>
+    <div class="cursor-label" id="cursor-label">element</div>
+  </div>
+</div>
+
+<script>
+const cursor  = document.getElementById("cursor");
+const label   = document.getElementById("cursor-label");
+const ripple1 = document.getElementById("ripple1");
+const ripple2 = document.getElementById("ripple2");
+
+let hideTimer = null;
+
+function showCursorAt(x, y, labelText) {
+  clearTimeout(hideTimer);
+
+  // Place instantly off-screen first time (no transition flash)
+  if (!cursor.classList.contains("visible")) {
+    cursor.style.transition = "none";
+    cursor.style.left = (window.innerWidth / 2) + "px";
+    cursor.style.top  = (window.innerHeight / 2) + "px";
+    // Force reflow before re-enabling transition
+    void cursor.offsetWidth;
+    cursor.style.transition = "";
+  }
+
+  // Update label
+  label.textContent = labelText || "element";
+
+  // Animate cursor to target position
+  cursor.style.left = x + "px";
+  cursor.style.top  = y + "px";
+  cursor.classList.add("visible");
+
+  // Fire click ripple after fly animation ends (~700ms)
+  setTimeout(() => {
+    ripple1.classList.remove("animate");
+    ripple2.classList.remove("animate");
+    void ripple1.offsetWidth; // reflow
+    ripple1.classList.add("animate");
+    ripple2.classList.add("animate");
+  }, 680);
+
+  // Auto-hide after 5.5s
+  hideTimer = setTimeout(hideCursor, 5500);
+}
+
+function hideCursor() {
+  cursor.classList.remove("visible");
+}
+
+window.openguider.on("show-cursor-at", (parsed) => {
+  if (!parsed) return;
+  // Fallback to coordinate.x if scaledX isn't set via IPC
+  const x = typeof parsed.scaledX === "number" ? parsed.scaledX : (parsed.coordinate?.x || 0);
+  const y = typeof parsed.scaledY === "number" ? parsed.scaledY : (parsed.coordinate?.y || 0);
+  showCursorAt(x, y, parsed.label);
+});
+
+window.openguider.on("hide-cursor", hideCursor);
+</script>
+</body>
+</html>

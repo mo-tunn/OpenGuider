@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>OpenGuider</title>
+<link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+<div class="panel">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-logo">
+      <img src="assets/logo.png" alt="OpenGuider">
+    </div>
+    <span class="header-title">OpenGuider</span>
+    <span class="agent-status" id="agent-status">idle</span>
+    <div class="header-actions">
+      <button class="icon-btn" id="btn-settings"   title="Settings">⚙</button>
+      <button class="icon-btn" id="btn-close"      title="Hide" style="-webkit-app-region:no-drag">✕</button>
+    </div>
+  </div>
+
+  <!-- Model bar -->
+  <div class="model-bar">
+    <span class="model-badge">Model</span>
+    <span class="provider-dot" id="provider-dot"></span>
+    <select class="model-select" id="model-select"></select>
+    <button class="clear-btn" id="btn-clear" title="Clear Conversation">🗑</button>
+  </div>
+
+  <!-- Chat messages -->
+  <div class="chat-area" id="chat-area">
+    <div class="chat-background" id="chat-background">
+      <div class="empty-state" id="chat-background-content">
+        <img src="assets/logo.png" alt="OpenGuider" class="empty-logo" id="chat-background-logo">
+        <p>Ask me anything.<br/><strong>Type</strong> below or hold <kbd>Ctrl+Shift+Space</kbd> to speak.</p>
+      </div>
+    </div>
+    <div class="chat-messages" id="chat-messages"></div>
+  </div>
+
+  <div class="plan-panel hidden" id="plan-panel">
+    <div class="plan-panel-header">
+      <div class="plan-panel-title" id="plan-goal"></div>
+      <div class="plan-panel-progress" id="plan-progress"></div>
+    </div>
+    <div class="plan-steps" id="plan-steps"></div>
+  </div>
+
+  <div class="panel-actions" id="panel-actions">
+    <button class="action-btn" id="btn-plan-prev" title="Previous step"><span class="action-icon">←</span><span>Back</span></button>
+    <button class="action-btn primary" id="btn-plan-done" title="Mark done"><span class="action-icon">✓</span><span>Done</span></button>
+    <button class="action-btn" id="btn-plan-skip" title="Skip step"><span class="action-icon">⤼</span><span>Skip</span></button>
+    <button class="action-btn" id="btn-plan-help" title="Need help"><span class="action-icon">?</span><span>Help</span></button>
+    <button class="action-btn" id="btn-plan-regenerate" title="Regenerate step"><span class="action-icon">⟳</span><span>Redo</span></button>
+    <button class="action-btn" id="btn-plan-recheck" title="Re-check"><span class="action-icon">↻</span><span>Re-check</span></button>
+    <button class="action-btn danger" id="btn-plan-cancel" title="Cancel plan"><span class="action-icon">✕</span><span>Cancel</span></button>
+  </div>
+
+  <div class="error-banner hidden" id="error-banner">
+    <div class="error-banner-main">
+      <strong id="error-banner-title">Something went wrong</strong>
+      <span id="error-banner-message"></span>
+      <span class="error-banner-request" id="error-banner-request"></span>
+    </div>
+    <div class="error-banner-actions">
+      <button class="error-banner-btn" id="error-banner-action" type="button">Open settings</button>
+      <button class="error-banner-btn ghost" id="error-banner-dismiss" type="button">Dismiss</button>
+    </div>
+  </div>
+
+  <!-- Input area -->
+  <div class="input-area">
+    <div class="input-row">
+      <select class="mode-select" id="assistant-mode-select" title="Assistant mode">
+        <option value="" selected disabled hidden>Mode</option>
+        <option value="planning">Planning</option>
+        <option value="fast">Fast</option>
+      </select>
+      <textarea class="text-input" id="text-input" placeholder="Ask anything..." rows="1"></textarea>
+      <button class="ptt-btn" id="ptt-btn" title="Hold to talk">⏺
+        <span class="waveform" id="waveform" style="display:none">
+          <span class="waveform-bar" id="wb1"></span>
+          <span class="waveform-bar" id="wb2"></span>
+          <span class="waveform-bar" id="wb3"></span>
+          <span class="waveform-bar" id="wb4"></span>
+          <span class="waveform-bar" id="wb5"></span>
+        </span>
+      </button>
+      <button class="send-btn" id="send-btn" title="Send">➤</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast hidden" id="toast"></div>
+
+<div class="onboarding-overlay hidden" id="onboarding-overlay" role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
+  <div class="onboarding-modal">
+    <h3 id="onboarding-title">Welcome to OpenGuider</h3>
+    <p id="onboarding-subtitle">Before first use, review these setup and security notes.</p>
+    <ol class="onboarding-steps">
+      <li>Open <strong>Settings</strong> and add your AI provider API key. API keys are obtained directly from your selected provider dashboard (OpenAI, Anthropic, Google, Groq, OpenRouter, Ollama, etc.).</li>
+      <li>Required permissions are microphone access (push-to-talk) and optional screen capture guidance. Installer metadata can document these permissions; runtime prompts are requested only when needed.</li>
+      <li>Your API keys are stored locally using secure OS storage when available (with encrypted fallback). OpenGuider only sends HTTPS requests to the AI providers you configure.</li>
+    </ol>
+    <div class="onboarding-actions">
+      <button class="confirm-btn" id="onboarding-open-settings" type="button">Open settings</button>
+    </div>
+  </div>
+</div>
+
+<div class="confirm-overlay hidden" id="confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+  <div class="confirm-modal">
+    <h3 id="confirm-title">Clear Conversation?</h3>
+    <p id="confirm-message">This will remove all chat history and active plan progress.</p>
+    <div class="confirm-actions">
+      <button class="confirm-btn ghost" id="confirm-cancel" type="button">Cancel</button>
+      <button class="confirm-btn danger" id="confirm-confirm" type="button">Clear</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
+

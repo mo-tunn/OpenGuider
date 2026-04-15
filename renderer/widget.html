@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>OpenGuider Widget</title>
+<link rel="stylesheet" href="css/widget.css"/>
+</head>
+<body>
+<div class="widget" id="widget">
+  <div class="widget-topbar">
+    <div class="status-container" id="status-container">
+      <img class="status-logo" id="status-logo" src="assets/logo.png" alt="OpenGuider"/>
+    </div>
+    <div class="status-copy">
+      <div class="status-text">
+        <span id="status-text">idle</span>
+        <span class="mini-loader hidden" id="widget-loader"></span>
+      </div>
+      <div class="goal-text" id="goal-text">No active plan</div>
+    </div>
+    <div class="controls" id="controls">
+      <button class="control-btn" id="btn-show-plan" title="Show plan">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+          <path d="M6 9L1.5 3.5h9z"/>
+        </svg>
+      </button>
+      <button class="control-btn expand-btn" id="btn-expand" title="Open main window">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+          <rect x="2" y="2" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="widget-details hidden" id="widget-details">
+    <div class="step-card">
+      <div class="step-title" id="step-title">Waiting for a task</div>
+      <div class="step-instruction" id="step-instruction">Ask for a goal and I will create a step-by-step plan.</div>
+      <div class="step-progress" id="step-progress">0/0</div>
+    </div>
+
+    <button class="action-btn chat-entry-btn hidden" id="btn-open-chat" title="Open chat panel">
+      Open Chat
+    </button>
+
+    <div class="action-row">
+      <button class="action-btn" id="btn-prev" title="Previous step">
+        <span class="icon">←</span>
+      </button>
+      <button class="action-btn primary" id="btn-done" title="Mark done">
+        <span class="icon">✓</span>
+      </button>
+      <button class="action-btn" id="btn-skip" title="Skip step">
+        <span class="icon">⤼</span>
+      </button>
+      <button class="action-btn" id="btn-help" title="Need help">
+        <span class="icon">?</span>
+      </button>
+      <button class="action-btn" id="btn-regenerate" title="Regenerate step">
+        <span class="icon">⟳</span>
+      </button>
+      <button class="action-btn" id="btn-recheck" title="Re-check">
+        <span class="icon">↻</span>
+      </button>
+      <button class="action-btn danger" id="btn-cancel-plan" title="Cancel plan">
+        <span class="icon">✕</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="js/widget.js"></script>
+</body>
+</html>

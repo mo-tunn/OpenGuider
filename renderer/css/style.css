@@ -823,6 +823,8 @@ kbd {
   border-bottom: 2px solid var(--border);
   gap: 12px;
   background: var(--surface);
+  /* Enable window dragging from the header; required because the window is frameless */
+  -webkit-app-region: drag;
 }
 .settings-header h2 { font-size: 18px; font-weight: 400; flex: 1; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; }
 

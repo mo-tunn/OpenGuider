@@ -17,7 +17,10 @@ NEVER provide coordinates in regular text like "(x, y)". ONLY use the [POINT:x,y
 
 // ── Claude ────────────────────────────────────────────────────────────────────
 async function streamClaude({ text, images, history, settings, onChunk, signal }) {
-  const url = "https://api.anthropic.com/v1/messages";
+  // Allow a custom base URL so users can point to a proxy or a compatible API.
+  // Falls back to the official Anthropic endpoint when not configured.
+  const baseUrl = (settings.claudeBaseUrl || "https://api.anthropic.com").replace(/\/$/, "");
+  const url = `${baseUrl}/v1/messages`;
   const messages = buildClaudeMessages(text, images, history);
   const systemPrompt = settings.systemPromptOverride || DEFAULT_SYSTEM_PROMPT;
 
@@ -77,7 +80,10 @@ function buildClaudeMessages(text, images, history) {
 
 // ── OpenAI ────────────────────────────────────────────────────────────────────
 async function streamOpenAI({ text, images, history, settings, onChunk, signal }) {
-  const url = "https://api.openai.com/v1/chat/completions";
+  // Allow a custom base URL so users can point to Azure OpenAI or a local proxy.
+  // Falls back to the official OpenAI endpoint when not configured.
+  const baseUrl = (settings.openaiBaseUrl || "https://api.openai.com/v1").replace(/\/$/, "");
+  const url = `${baseUrl}/chat/completions`;
 
   const systemPrompt = settings.systemPromptOverride || DEFAULT_SYSTEM_PROMPT;
   const messages = [{ role: "system", content: systemPrompt }];
@@ -121,7 +127,10 @@ async function streamOpenAI({ text, images, history, settings, onChunk, signal }
 async function streamOpenRouter({ text, images, history, settings, onChunk, signal }) {
   const OPENROUTER_MIN_TOKENS = 32;
   const OPENROUTER_MAX_TOKENS = 4096;
-  const url = "https://openrouter.ai/api/v1/chat/completions";
+  // Allow a custom base URL for OpenRouter-compatible endpoints.
+  // Falls back to the official OpenRouter endpoint when not configured.
+  const baseUrl = (settings.openrouterBaseUrl || "https://openrouter.ai/api/v1").replace(/\/$/, "");
+  const url = `${baseUrl}/chat/completions`;
 
   const systemPrompt = settings.systemPromptOverride || DEFAULT_SYSTEM_PROMPT;
   const messages = [{ role: "system", content: systemPrompt }];
@@ -214,7 +223,10 @@ async function streamOpenRouter({ text, images, history, settings, onChunk, sign
 // ── Gemini ────────────────────────────────────────────────────────────────────
 async function streamGemini({ text, images, history, settings, onChunk, signal }) {
   const model = settings.aiModel || "gemini-2.0-flash";
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${settings.geminiApiKey}`;
+  // Allow a custom base URL for Gemini-compatible endpoints.
+  // Falls back to the official Google Generative Language API when not configured.
+  const baseUrl = (settings.geminiBaseUrl || "https://generativelanguage.googleapis.com/v1beta").replace(/\/$/, "");
+  const url = `${baseUrl}/models/${model}:streamGenerateContent?alt=sse&key=${settings.geminiApiKey}`;
 
   const systemPrompt = settings.systemPromptOverride || DEFAULT_SYSTEM_PROMPT;
   const contents = [];
@@ -261,7 +273,10 @@ async function streamGemini({ text, images, history, settings, onChunk, signal }
 // Groq uses an OpenAI-compatible API with very fast inference.
 // Vision models: llama-3.2-11b-vision-preview, llama-3.2-90b-vision-preview
 async function streamGroq({ text, images, history, settings, onChunk, signal }) {
-  const url = "https://api.groq.com/openai/v1/chat/completions";
+  // Allow a custom base URL for Groq-compatible endpoints.
+  // Falls back to the official Groq endpoint when not configured.
+  const baseUrl = (settings.groqBaseUrl || "https://api.groq.com/openai/v1").replace(/\/$/, "");
+  const url = `${baseUrl}/chat/completions`;
   const systemPrompt = settings.systemPromptOverride || DEFAULT_SYSTEM_PROMPT;
 
   const messages = [{ role: "system", content: systemPrompt }];

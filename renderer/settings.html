@@ -47,6 +47,11 @@
             <input class="form-input" id="claudeModel" type="text" placeholder="e.g. claude-sonnet-4-5"/>
             <span class="hint">Type the exact model name (e.g. claude-opus-4-5, claude-haiku-3-5)</span>
           </div>
+          <div class="form-group">
+            <label>Base URL</label>
+            <input class="form-input" id="claudeBaseUrl" type="url" placeholder="https://api.anthropic.com"/>
+            <span class="hint">Leave default for official Anthropic API. Change only if using a proxy or compatible endpoint.</span>
+          </div>
         </div>
 
         <div class="provider-section" id="section-openai">
@@ -59,6 +64,11 @@
             <input class="form-input" id="openaiModel" type="text" placeholder="e.g. gpt-4o"/>
             <span class="hint">Type the exact model name (e.g. gpt-4o-mini, o3-mini)</span>
           </div>
+          <div class="form-group">
+            <label>Base URL</label>
+            <input class="form-input" id="openaiBaseUrl" type="url" placeholder="https://api.openai.com/v1"/>
+            <span class="hint">Leave default for official OpenAI API. Change for Azure OpenAI or a local proxy.</span>
+          </div>
         </div>
 
         <div class="provider-section" id="section-gemini">
@@ -70,6 +80,11 @@
             <label>Model Name</label>
             <input class="form-input" id="geminiModel" type="text" placeholder="e.g. gemini-2.0-flash"/>
             <span class="hint">Type the exact model name (e.g. gemini-2.5-pro, gemini-1.5-flash)</span>
+          </div>
+          <div class="form-group">
+            <label>Base URL</label>
+            <input class="form-input" id="geminiBaseUrl" type="url" placeholder="https://generativelanguage.googleapis.com/v1beta"/>
+            <span class="hint">Leave default for official Google API. Change only if using a compatible proxy.</span>
           </div>
         </div>
 
@@ -84,6 +99,11 @@
             <input class="form-input" id="openrouterModel" type="text" placeholder="e.g. google/gemini-2.0-flash-lite-preview-02-05:free"/>
             <span class="hint">Type the exact OpenRouter model ID</span>
           </div>
+          <div class="form-group">
+            <label>Base URL</label>
+            <input class="form-input" id="openrouterBaseUrl" type="url" placeholder="https://openrouter.ai/api/v1"/>
+            <span class="hint">Leave default for official OpenRouter API. Change only if using a compatible proxy.</span>
+          </div>
         </div>
 
         <div class="provider-section" id="section-groq">
@@ -96,6 +116,11 @@
             <label>Model Name</label>
             <input class="form-input" id="groqModel" type="text" placeholder="e.g. llama-3.2-11b-vision-preview"/>
             <span class="hint">Vision models: llama-3.2-11b-vision-preview, llama-3.2-90b-vision-preview</span>
+          </div>
+          <div class="form-group">
+            <label>Base URL</label>
+            <input class="form-input" id="groqBaseUrl" type="url" placeholder="https://api.groq.com/openai/v1"/>
+            <span class="hint">Leave default for official Groq API. Change only if using a Groq-compatible proxy.</span>
           </div>
         </div>
 

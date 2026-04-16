@@ -2,18 +2,32 @@ const Store = require("electron-store");
 const schema = {
   aiProvider:   { type:"string", enum:["claude","openai","gemini","groq","ollama","openrouter"], default:"claude" },
   aiModel:      { type:"string", default:"" },
-  claudeApiKey: { type:"string", default:"" },
+  claudeApiKey:     { type:"string", default:"" },
   claudeModelCustom: { type:"string", default:"" },
-  openaiApiKey: { type:"string", default:"" },
+  // Custom base URL for Claude (e.g. proxy or compatible API); defaults to official Anthropic endpoint
+  claudeBaseUrl:    { type:"string", default:"https://api.anthropic.com" },
+
+  openaiApiKey:     { type:"string", default:"" },
   openaiModelCustom: { type:"string", default:"" },
-  geminiApiKey: { type:"string", default:"" },
+  // Custom base URL for OpenAI (e.g. Azure OpenAI or local proxy); defaults to official OpenAI endpoint
+  openaiBaseUrl:    { type:"string", default:"https://api.openai.com/v1" },
+
+  geminiApiKey:     { type:"string", default:"" },
   geminiModelCustom: { type:"string", default:"" },
+  // Custom base URL for Gemini; defaults to official Google Generative Language API endpoint
+  geminiBaseUrl:    { type:"string", default:"https://generativelanguage.googleapis.com/v1beta" },
 
   groqApiKey:     { type:'string', default:'' },
   groqModelCustom: { type:'string', default:'' },
+  // Custom base URL for Groq (e.g. a Groq-compatible service); defaults to official Groq endpoint
+  groqBaseUrl:    { type:"string", default:"https://api.groq.com/openai/v1" },
+
   openrouterApiKey: { type:'string', default:'' },
   openrouterModelCustom: { type:'string', default:'' },
   openrouterMaxTokens: { type:"number", default:2048 },
+  // Custom base URL for OpenRouter; defaults to official OpenRouter endpoint
+  openrouterBaseUrl: { type:"string", default:"https://openrouter.ai/api/v1" },
+
   ollamaUrl:    { type:"string", default:"http://localhost:11434" },
   ollamaModelCustom: { type:"string", default:"" },
   sttProvider:  { type:"string", enum:["webspeech","assemblyai","whisper"], default:"webspeech" },

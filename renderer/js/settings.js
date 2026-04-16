@@ -30,18 +30,23 @@ async function init() {
   });
 
   // Fill fields — AI Provider
-  document.getElementById("claudeApiKey").value    = settings.claudeApiKey     || "";
-  document.getElementById("claudeModel").value     = settings.claudeModelCustom || "";
-  document.getElementById("openaiApiKey").value    = settings.openaiApiKey     || "";
-  document.getElementById("openaiModel").value     = settings.openaiModelCustom || "";
-  document.getElementById("geminiApiKey").value    = settings.geminiApiKey     || "";
-  document.getElementById("geminiModel").value     = settings.geminiModelCustom || "";
-  document.getElementById("groqApiKey").value      = settings.groqApiKey       || "";
-  document.getElementById("groqModel").value       = settings.groqModelCustom  || "";
-  document.getElementById("openrouterApiKey").value = settings.openrouterApiKey || "";
-  document.getElementById("openrouterModel").value  = settings.openrouterModelCustom || "";
-  document.getElementById("ollamaUrl").value       = settings.ollamaUrl        || "http://localhost:11434";
-  document.getElementById("ollamaModel").value     = settings.ollamaModelCustom || "";
+  document.getElementById("claudeApiKey").value      = settings.claudeApiKey          || "";
+  document.getElementById("claudeModel").value       = settings.claudeModelCustom     || "";
+  document.getElementById("claudeBaseUrl").value     = settings.claudeBaseUrl         || "https://api.anthropic.com";
+  document.getElementById("openaiApiKey").value      = settings.openaiApiKey          || "";
+  document.getElementById("openaiModel").value       = settings.openaiModelCustom     || "";
+  document.getElementById("openaiBaseUrl").value     = settings.openaiBaseUrl         || "https://api.openai.com/v1";
+  document.getElementById("geminiApiKey").value      = settings.geminiApiKey          || "";
+  document.getElementById("geminiModel").value       = settings.geminiModelCustom     || "";
+  document.getElementById("geminiBaseUrl").value     = settings.geminiBaseUrl         || "https://generativelanguage.googleapis.com/v1beta";
+  document.getElementById("groqApiKey").value        = settings.groqApiKey            || "";
+  document.getElementById("groqModel").value         = settings.groqModelCustom       || "";
+  document.getElementById("groqBaseUrl").value       = settings.groqBaseUrl           || "https://api.groq.com/openai/v1";
+  document.getElementById("openrouterApiKey").value  = settings.openrouterApiKey      || "";
+  document.getElementById("openrouterModel").value   = settings.openrouterModelCustom || "";
+  document.getElementById("openrouterBaseUrl").value = settings.openrouterBaseUrl     || "https://openrouter.ai/api/v1";
+  document.getElementById("ollamaUrl").value         = settings.ollamaUrl             || "http://localhost:11434";
+  document.getElementById("ollamaModel").value       = settings.ollamaModelCustom     || "";
   // STT / TTS
   document.getElementById("assemblyaiApiKey").value  = settings.assemblyaiApiKey  || "";
   document.getElementById("whisperApiKey").value     = settings.whisperApiKey     || "";
@@ -354,11 +359,16 @@ async function saveSettings() {
     openrouterModelCustom:   modelMap.openrouter,
     ollamaModelCustom:       modelMap.ollama,
     claudeApiKey:            document.getElementById("claudeApiKey").value.trim(),
+    claudeBaseUrl:           document.getElementById("claudeBaseUrl").value.trim()        || "https://api.anthropic.com",
     openaiApiKey:            document.getElementById("openaiApiKey").value.trim(),
+    openaiBaseUrl:           document.getElementById("openaiBaseUrl").value.trim()        || "https://api.openai.com/v1",
     geminiApiKey:            document.getElementById("geminiApiKey").value.trim(),
+    geminiBaseUrl:           document.getElementById("geminiBaseUrl").value.trim()        || "https://generativelanguage.googleapis.com/v1beta",
     groqApiKey:              document.getElementById("groqApiKey").value.trim(),
+    groqBaseUrl:             document.getElementById("groqBaseUrl").value.trim()          || "https://api.groq.com/openai/v1",
     openrouterApiKey:        document.getElementById("openrouterApiKey").value.trim(),
-    ollamaUrl:               document.getElementById("ollamaUrl").value.trim() || "http://localhost:11434",
+    openrouterBaseUrl:       document.getElementById("openrouterBaseUrl").value.trim()    || "https://openrouter.ai/api/v1",
+    ollamaUrl:               document.getElementById("ollamaUrl").value.trim()            || "http://localhost:11434",
     assemblyaiApiKey:        document.getElementById("assemblyaiApiKey").value.trim(),
     whisperApiKey:           document.getElementById("whisperApiKey").value.trim(),
     whisperBaseUrl:          document.getElementById("whisperBaseUrl").value.trim() || "https://api.openai.com/v1",

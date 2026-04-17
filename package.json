@@ -1,6 +1,6 @@
 {
   "name": "openguider",
-  "version": "0.2.9",
+  "version": "0.2.10",
   "description": "OpenGuider AI Companion",
   "author": "Metehan Kızılcık",
   "license": "GPL-3.0-or-later",
@@ -35,7 +35,6 @@
     "appId": "com.openguider.desktop",
     "productName": "OpenGuider",
     "icon": "renderer/assets/logo.ico",
-    "afterPack": "./scripts/after-pack.js",
     "asar": true,
     "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
     "directories": {
@@ -66,7 +65,7 @@
     },
     "win": {
       "icon": "renderer/assets/logo.ico",
-      "signAndEditExecutable": false,
+      "signAndEditExecutable": true,
       "target": [
         {
           "target": "nsis",

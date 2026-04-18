@@ -1726,6 +1726,30 @@ h2 {
   font-style: italic;
 }
 
+.configure-guides {
+  margin-top: 22px;
+  border-top: 1px solid rgba(198, 90, 58, 0.24);
+  padding-top: 18px;
+}
+
+.configure-guides-title {
+  margin: 0 0 10px;
+  color: #d6c9bf;
+  font-size: 14px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.configure-guides-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.configure-guide-btn {
+  cursor: pointer;
+}
+
 .security-shell {
   position: relative;
   border: 1px solid rgba(198, 90, 58, 0.28);
@@ -2941,6 +2965,14 @@ h2 {
 
   .configure-step-description {
     font-size: 15px;
+  }
+
+  .configure-guides-actions {
+    flex-direction: column;
+  }
+
+  .configure-guide-btn {
+    width: 100%;
   }
 
   .feature-card {

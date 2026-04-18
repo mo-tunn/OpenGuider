@@ -240,6 +240,31 @@ function initConfigurePanel() {
   selectStep(0);
 }
 
+function initConfigurationGuideButtons() {
+  const guideButtons = Array.from(document.querySelectorAll(".configure-guide-btn"));
+  if (!guideButtons.length) {
+    return;
+  }
+
+  const normalizedPath = window.location.pathname.replace(/\\/g, "/").toLowerCase();
+  const isLocalLandingFile = normalizedPath.includes("/landing/");
+
+  guideButtons.forEach((button) => {
+    if (!(button instanceof HTMLButtonElement)) {
+      return;
+    }
+    const primaryHref = button.dataset.pdfPrimary;
+    const fallbackHref = button.dataset.pdfFallback;
+    if (!primaryHref) {
+      return;
+    }
+    button.addEventListener("click", () => {
+      const targetHref = isLocalLandingFile && fallbackHref ? fallbackHref : primaryHref;
+      window.open(targetHref, "_blank", "noopener,noreferrer");
+    });
+  });
+}
+
 function testImage(path) {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -705,6 +730,7 @@ function initHeroScrollMotion() {
 renderModules();
 renderDownloads();
 initConfigurePanel();
+initConfigurationGuideButtons();
 initHeroEntranceEffects();
 initHeroScrollMotion();
 startEyeBlink();

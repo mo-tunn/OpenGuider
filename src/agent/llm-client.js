@@ -49,7 +49,7 @@ async function invokeStructuredChain({
         try {
           return {
             rawText,
-            value: schema ? parseStructuredJSON(rawText, schema) : rawText,
+            value: schema ? parseStructuredJSON(rawText, schema, operationName.startsWith("locator")) : rawText,
           };
         } catch (error) {
           throw new Error(`[${operationName}] ${error.message}`);

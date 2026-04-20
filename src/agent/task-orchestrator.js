@@ -7,13 +7,16 @@ const { replanGoal } = require("./replanner-chain");
 const { captureScreenTool } = require("./tools/capture-screen-tool");
 const { requestUserInputTool, updatePlanTool } = require("./tools/plan-tool");
 const { createLogger } = require("../logger");
+const { createInteractionPipeline } = require("./interaction-pipeline");
 
 const logger = createLogger("task-orchestrator");
 
 class TaskOrchestrator {
-  constructor({ captureAllScreens, sessionManager }) {
+  constructor({ captureAllScreens, sessionManager, prePostLayersEnabled = true }) {
     this.captureAllScreens = captureAllScreens;
     this.sessionManager = sessionManager;
+    this.prePostLayersEnabled = prePostLayersEnabled;
+    this.interactionPipeline = prePostLayersEnabled ? createInteractionPipeline() : null;
   }
 
   getSnapshot() {
@@ -71,9 +74,27 @@ class TaskOrchestrator {
   }
 
   async runSingleTurnFallback({ text, images, settings, signal }) {
-    const history = this.sessionManager.getSnapshot().messages.slice(-20);
+    const snapshot = this.sessionManager.getSnapshot();
+    const history = snapshot.messages.slice(-20);
+
+    let enrichedText = text;
+    let preprocessingContext = { ocrResult: null, windowInfo: null, matchedElements: [] };
+
+    if (this.interactionPipeline && images.length > 0) {
+      preprocessingContext = await this.interactionPipeline.preprocess({
+        images,
+        step: null,
+        sessionId: snapshot.sessionId,
+        signal,
+      });
+
+      if (preprocessingContext.ocrResult || preprocessingContext.windowInfo) {
+        enrichedText = await this.interactionPipeline.distillContext(text, preprocessingContext, settings);
+      }
+    }
+
     const fullText = await streamAIResponse({
-      text,
+      text: enrichedText,
       images,
       history,
       settings,
@@ -82,7 +103,7 @@ class TaskOrchestrator {
     });
 
     const parsed = parsePointTag(fullText);
-    const pointer = parsed.coordinate
+    let finalPointer = parsed.coordinate
       ? {
           coordinate: parsed.coordinate,
           label: parsed.label,
@@ -91,8 +112,35 @@ class TaskOrchestrator {
         }
       : null;
 
+    if (this.interactionPipeline && finalPointer?.coordinate) {
+      const postResult = await this.interactionPipeline.postprocess({
+        coordinate: finalPointer.coordinate,
+        label: finalPointer.label,
+        step: null,
+        sessionId: snapshot.sessionId,
+        signal,
+      });
+
+      if (postResult.confidence > 0.5 && postResult.coordinate) {
+        finalPointer = {
+          ...finalPointer,
+          coordinate: postResult.coordinate,
+          explanation: (finalPointer.explanation || "") + ` [Verified: ${postResult.reason}]`,
+        };
+      } else if (postResult.confidence < 0.4 && this.interactionPipeline.shouldRecheck(finalPointer.coordinate)) {
+        const fallback = this.interactionPipeline.getFallbackCoordinate();
+        if (fallback) {
+          finalPointer = {
+            ...finalPointer,
+            coordinate: fallback,
+            explanation: (finalPointer.explanation || "") + " [Using fallback]",
+          };
+        }
+      }
+    }
+
     this.sessionManager.setActivePlan(null);
-    this.sessionManager.setCurrentPointer(pointer);
+    this.sessionManager.setCurrentPointer(finalPointer);
     this.sessionManager.addMessage({
       role: "assistant",
       content: parsed.spokenText || fullText,
@@ -101,7 +149,7 @@ class TaskOrchestrator {
 
     return {
       assistantMessage: parsed.spokenText || fullText,
-      pointer,
+      pointer: finalPointer,
       session: this.sessionManager.getSnapshot(),
       userInputRequest: null,
     };
@@ -135,9 +183,21 @@ class TaskOrchestrator {
         })
       : await this.resolveScreenshots(snapshot.lastScreenshots);
     this.sessionManager.setLastScreenshots(images);
+
+    let preprocessingContext = { ocrResult: null, windowInfo: null, matchedElements: [] };
+    if (this.interactionPipeline && images.length > 0) {
+      preprocessingContext = await this.interactionPipeline.preprocess({
+        images,
+        step,
+        sessionId: snapshot.sessionId,
+        signal,
+      });
+    }
+
     let pointer = null;
+    let llmRawCoordinate = null;
     try {
-      pointer = await locateStepTarget({
+      const llmResult = await locateStepTarget({
         plan,
         step,
         images,
@@ -145,8 +205,12 @@ class TaskOrchestrator {
         userNote,
         signal,
         forcePointing,
+        preprocessing: preprocessingContext,
       });
+      llmRawCoordinate = llmResult?.coordinate;
+      pointer = llmResult;
     } catch (error) {
+      console.error("===== LLM LOCATOR THREW ERROR =====", error);
       pointer = this.ensurePointerForStep(
         null,
         step,
@@ -160,6 +224,34 @@ class TaskOrchestrator {
         rationale: error.message,
         suggestedAction: "repeat_guidance",
       });
+    }
+
+    if (this.interactionPipeline && pointer?.coordinate) {
+      const postResult = await this.interactionPipeline.postprocess({
+        coordinate: pointer.coordinate,
+        label: pointer.label,
+        step,
+        sessionId: snapshot.sessionId,
+        signal,
+      });
+      if (postResult.confidence > 0.5 && postResult.coordinate) {
+        if (postResult.boundsClamped || postResult.snapped) {
+          pointer = {
+            ...pointer,
+            coordinate: postResult.coordinate,
+            explanation: (pointer.explanation || "") + ` [Verified: ${postResult.reason}]`,
+          };
+        }
+      } else if (postResult.confidence < 0.4 && this.interactionPipeline.shouldRecheck(pointer.coordinate)) {
+        const fallback = this.interactionPipeline.getFallbackCoordinate();
+        if (fallback) {
+          pointer = {
+            ...pointer,
+            coordinate: fallback,
+            explanation: (pointer.explanation || "") + " [Using fallback coordinate]",
+          };
+        }
+      }
     }
 
     if (forcePointing) {
@@ -514,6 +606,9 @@ class TaskOrchestrator {
   resetSession({ requestId } = {}) {
     logger.info("reset-session", { requestId });
     this.sessionManager.clearSession();
+    if (this.interactionPipeline) {
+      this.interactionPipeline.clear();
+    }
     return this.sessionManager.getSnapshot();
   }
 

@@ -9,6 +9,7 @@ test("markStepDone completes single-step plan in manual confirmation flow", asyn
   const orchestrator = new TaskOrchestrator({
     captureAllScreens: async () => [],
     sessionManager,
+    prePostLayersEnabled: false,
   });
 
   sessionManager.setActivePlan({

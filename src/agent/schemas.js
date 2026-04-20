@@ -52,9 +52,39 @@ function extractJSONObject(rawText = "") {
   return JSON.parse(candidate.slice(start, end + 1));
 }
 
-function parseStructuredJSON(rawText, schema) {
-  const parsed = extractJSONObject(rawText);
-  return schema.parse(parsed);
+function parseStructuredJSON(rawText, schema, isLocator = false) {
+  let result;
+  
+  if (!isLocator) {
+    // For standard schemas (like Planner), we WANT them to throw on failure 
+    // so the retry mechanisms or UI handlers can properly catch them.
+    const parsed = extractJSONObject(rawText);
+    return schema.parse(parsed);
+  }
+  
+  // For Locators, we use an indestructible fallback
+  console.log("=== RAW LLM RESPONSE ===");
+  console.log(rawText);
+  console.log("========================");
+  
+  result = { coordinate: null, label: null, explanation: rawText, shouldPoint: true };
+  try {
+    const parsed = extractJSONObject(rawText);
+    result = schema.parse(parsed);
+  } catch (error) {
+    console.error("Failed to parse JSON/Zod, falling back to raw Regex extraction:", error.message);
+  }
+  
+  // Always harvest coordinates from native [POINT:x,y:label] tags in rawText, even if JSON failed!
+  const regex = /\[POINT:(?:none|([\d.]+)\s*,\s*([\d.]+)(?::([^\]:]+))?(?::screen(\d+))?)\]/i;
+  const match = rawText.match(regex);
+  if (match && match[1] && match[2]) {
+    result.coordinate = { x: parseFloat(match[1]), y: parseFloat(match[2]) };
+    if (match[3]) result.label = match[3];
+    result.shouldPoint = true;
+  }
+  
+  return result;
 }
 
 module.exports = {

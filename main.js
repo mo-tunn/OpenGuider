@@ -1288,8 +1288,27 @@ function setupIPC() {
       requestSettings.systemPromptOverride = `${userPrompt}\n\n${FAST_MODE_PROMPT}`.trim();
     }
     try {
+      // ── Pre-LLM layer: enrich prompt with OCR & window context ──
+      const layerManager = taskOrchestrator.interactionPipeline;
+      let enrichedText = text;
+      if (layerManager && Array.isArray(images) && images.length > 0) {
+        try {
+          const preContext = await layerManager.preprocess({
+            images,
+            step: null,
+            sessionId: sessionManager?.getSnapshot?.().sessionId || "fast",
+            signal: currentAIController.signal,
+          });
+          if (preContext.ocrResult || preContext.windowInfo) {
+            enrichedText = await layerManager.distillContext(text, preContext, requestSettings);
+          }
+        } catch (preErr) {
+          appLogger.warn("send-message pre-layer error (non-fatal)", { error: preErr });
+        }
+      }
+
       const fullText = await streamAIResponse({
-        text, images, history, settings: requestSettings,
+        text: enrichedText, images, history, settings: requestSettings,
         signal: currentAIController.signal,
         onChunk: (chunk) => {
           if (!event.sender.isDestroyed())
@@ -1309,9 +1328,28 @@ function setupIPC() {
       });
       updateWidgetState("idle");
 
-      if (parsed.coordinate) {
+      // ── Post-LLM layer: validate & snap coordinates ──
+      let finalCoordinate = parsed.coordinate;
+      if (layerManager && parsed.coordinate) {
+        try {
+          const postResult = await layerManager.postprocess({
+            coordinate: parsed.coordinate,
+            label: parsed.label,
+            step: null,
+            sessionId: sessionManager?.getSnapshot?.().sessionId || "fast",
+            signal: currentAIController?.signal,
+          });
+          if (postResult.confidence > 0.5 && postResult.coordinate) {
+            finalCoordinate = postResult.coordinate;
+          }
+        } catch (postErr) {
+          appLogger.warn("send-message post-layer error (non-fatal)", { error: postErr });
+        }
+      }
+
+      if (finalCoordinate) {
         showPointer({
-          coordinate: parsed.coordinate,
+          coordinate: finalCoordinate,
           label: parsed.label,
           explanation: parsed.spokenText,
           shouldPoint: true,
@@ -1537,6 +1575,7 @@ app.whenReady().then(() => {
   taskOrchestrator = new TaskOrchestrator({
     captureAllScreens,
     sessionManager,
+    prePostLayersEnabled: true,
   });
   createTray();
   createPanelWindow();

@@ -55,7 +55,7 @@
     },
     "npmRebuild": true,
     "mac": {
-      "icon": "renderer/assets/logo.ico",
+      "icon": "renderer/assets/logo.png",
       "category": "public.app-category.productivity",
       "target": [
         "dmg"

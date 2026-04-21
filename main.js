@@ -365,9 +365,11 @@ function createWidgetWindow() {
   widgetWindow.loadFile(path.join(__dirname, "renderer", "widget.html"));
   attachWindowCrashHandlers(widgetWindow, "widget");
 
-  // Position at top right
-  const { width, height } = screen.getPrimaryDisplay().workArea;
-  widgetWindow.setPosition(width - WIDGET_WIDTH - 20, 20);
+  // Position at top-right of the display where the mouse cursor currently is
+  const cursorPt = screen.getCursorScreenPoint();
+  const activeDisplay = screen.getDisplayNearestPoint(cursorPt);
+  const wa = activeDisplay.workArea;
+  widgetWindow.setPosition(wa.x + wa.width - WIDGET_WIDTH - 20, wa.y + 20);
 
   widgetWindow.on("closed", () => { widgetWindow = null; });
 }
@@ -377,9 +379,11 @@ function positionWidgetBottomRight(nextHeight) {
     return;
   }
 
-  const { width, height } = screen.getPrimaryDisplay().workArea;
-  const x = width - WIDGET_WIDTH - 20;
-  const y = height - nextHeight - 20;
+  // Use the display the widget is currently on, not always the primary display
+  const [wx, wy] = widgetWindow.getPosition();
+  const { workArea: wa } = screen.getDisplayNearestPoint({ x: wx, y: wy });
+  const x = wa.x + wa.width - WIDGET_WIDTH - 20;
+  const y = wa.y + wa.height - nextHeight - 20;
   widgetWindow.setPosition(x, y);
 }
 
@@ -483,15 +487,38 @@ function showPointer(pointer) {
 
 // ── Panel position (top-right by default, persistent if moved) ───────────────
 function getPanelPosition() {
-  const workArea = screen.getPrimaryDisplay().workArea;
-  const defaultX = workArea.x + workArea.width - PANEL_WIDTH - 20;
-  const defaultY = workArea.y + 20;
-  const savedX = Number(store?.get("panelWindowX", -1));
-  const savedY = Number(store?.get("panelWindowY", -1));
-  const x = Number.isFinite(savedX) && savedX >= 0 ? savedX : defaultX;
-  const y = Number.isFinite(savedY) && savedY >= 0 ? savedY : defaultY;
-  const clampedX = Math.max(workArea.x, Math.min(x, workArea.x + workArea.width - PANEL_WIDTH));
-  const clampedY = Math.max(workArea.y, Math.min(y, workArea.y + workArea.height - PANEL_HEIGHT));
+  const displays = screen.getAllDisplays();
+  const primaryWorkArea = screen.getPrimaryDisplay().workArea;
+  const defaultX = primaryWorkArea.x + primaryWorkArea.width - PANEL_WIDTH - 20;
+  const defaultY = primaryWorkArea.y + 20;
+
+  const rawX = store?.get("panelWindowX");
+  const rawY = store?.get("panelWindowY");
+
+  if (rawX === undefined || rawX === null || rawY === undefined || rawY === null) {
+    return { x: defaultX, y: defaultY };
+  }
+
+  const savedX = Number(rawX);
+  const savedY = Number(rawY);
+
+  if (!Number.isFinite(savedX) || !Number.isFinite(savedY)) {
+    return { x: defaultX, y: defaultY };
+  }
+
+  // Find which display the saved position belongs to (handles multi-monitor setups)
+  const targetDisplay =
+    displays.find(
+      (d) =>
+        savedX >= d.workArea.x &&
+        savedX < d.workArea.x + d.workArea.width &&
+        savedY >= d.workArea.y &&
+        savedY < d.workArea.y + d.workArea.height,
+    ) || screen.getPrimaryDisplay();
+
+  const wa = targetDisplay.workArea;
+  const clampedX = Math.max(wa.x, Math.min(savedX, wa.x + wa.width - PANEL_WIDTH));
+  const clampedY = Math.max(wa.y, Math.min(savedY, wa.y + wa.height - PANEL_HEIGHT));
   return { x: clampedX, y: clampedY };
 }
 
@@ -1421,6 +1448,10 @@ function setupIPC() {
       const resp = await fetch("https://streaming.assemblyai.com/v3/token?expires_in_seconds=480", {
         headers: { authorization: settings.assemblyaiApiKey },
       });
+      if (!resp.ok) {
+        const errBody = await resp.text().catch(() => "");
+        throw new Error(`AssemblyAI token request failed (${resp.status}): ${errBody || resp.statusText}`);
+      }
       const json = await resp.json();
       return json.token;
     }
@@ -1491,8 +1522,10 @@ function setupIPC() {
       return false;
     }
 
-    const { height: workAreaHeight } = screen.getPrimaryDisplay().workArea;
-    const maxHeight = Math.max(WIDGET_COLLAPSED_HEIGHT, workAreaHeight - 40);
+    // Use the display the widget is currently on for accurate height clamping
+    const [wx, wy] = widgetWindow.getPosition();
+    const { workArea: widgetWorkArea } = screen.getDisplayNearestPoint({ x: wx, y: wy });
+    const maxHeight = Math.max(WIDGET_COLLAPSED_HEIGHT, widgetWorkArea.height - 40);
     const nextHeight = Math.max(
       WIDGET_COLLAPSED_HEIGHT,
       Math.min(Math.round(numericHeight), maxHeight),

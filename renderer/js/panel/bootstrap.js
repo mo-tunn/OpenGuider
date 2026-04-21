@@ -156,6 +156,31 @@ export function createPanelController({
     dom.pttBtn.addEventListener("mouseup", ptt.stopPTT);
     dom.pttBtn.addEventListener("mouseleave", ptt.stopPTT);
 
+    // Click anywhere in chat area focuses the text input for typing.
+    dom.chatArea.addEventListener("click", (event) => {
+      // Don't steal focus from links or interactive elements inside messages.
+      if (event.target.closest("a, button, select, input, textarea, details")) {
+        return;
+      }
+      dom.textInput.focus();
+    });
+
+    // Safety: reset stuck UI state when user focuses the text input.
+    dom.textInput.addEventListener("focus", () => {
+      if (state.isStreaming()) {
+        log("safety:focus reset stuck streaming state");
+        api.invoke("abort-message");
+        state.setStreaming(false);
+        dom.sendBtn.disabled = false;
+        ui.renderAgentState("idle");
+        ui.removeAllTypingIndicators();
+      }
+      if (state.isRecording()) {
+        log("safety:focus reset stuck recording state");
+        ptt.stopPTT();
+      }
+    });
+
     dom.onboardingOpenSettings?.addEventListener("click", async () => {
       state.setSetting("onboardingCompleted", true);
       await api.invoke("save-settings", { onboardingCompleted: true });

@@ -84,7 +84,6 @@ export function createMessagingController({
     const assistantMode = state.getSetting("assistantMode");
     if (assistantMode !== "planning" && assistantMode !== "fast") {
       ui.showToast("Please choose a Mode first.", true);
-      dom.sendBtn.disabled = true;
       return;
     }
 
@@ -95,6 +94,18 @@ export function createMessagingController({
     state.setStreaming(true);
     dom.sendBtn.disabled = true;
     ui.renderAgentState("thinking");
+
+    // Safety timeout: auto-reset if streaming is stuck for more than 60s.
+    const streamingTimeout = window.setTimeout(() => {
+      if (state.isStreaming()) {
+        log("safety:streaming timeout — force reset after 60s");
+        api.invoke("abort-message");
+        state.setStreaming(false);
+        dom.sendBtn.disabled = false;
+        ui.renderAgentState("idle");
+        ui.removeAllTypingIndicators();
+      }
+    }, 60000);
 
     let typingId = null;
     log("ai:send-message start", {
@@ -128,6 +139,7 @@ export function createMessagingController({
     } catch (error) {
       onAIError(error.message);
     } finally {
+      window.clearTimeout(streamingTimeout);
       state.setStreaming(false);
       dom.sendBtn.disabled = false;
       if (typingId !== null) {

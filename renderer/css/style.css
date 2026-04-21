@@ -340,6 +340,7 @@ html, body {
 
 .error-banner.hidden {
   display: none;
+  pointer-events: none;
 }
 
 .error-banner-main {
@@ -1097,7 +1098,7 @@ kbd {
   z-index: 9999;
   transition: opacity 0.3s, transform 0.3s;
 }
-.toast.hidden { opacity: 0; transform: translateX(-50%) translateY(10px); }
+.toast.hidden { opacity: 0; transform: translateX(-50%) translateY(10px); pointer-events: none; }
 
 /* ── In-app confirm modal ─────────────────────────────────────────────────── */
 .confirm-overlay {

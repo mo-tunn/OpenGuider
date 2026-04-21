@@ -13,6 +13,13 @@ IMPORTANT COORDINATE RULES:
 Example: "Here is the submit button. [POINT:850,450:Submit Button]" (meaning 85% right, 45% down from top)
 If no pointing is needed, DO NOT invent coordinates, just reply normally or append [POINT:none].
 NEVER provide coordinates in regular text like "(x, y)". ONLY use the [POINT:x,y:label] tag format.
+
+MULTI-SCREEN RULE:
+When you receive screenshots from multiple screens (e.g. [Screen 1 (primary)], [Screen 2]), you MUST append the screen number to the POINT tag.
+Format: [POINT:x,y:label:screenN]  — where N matches the number in the [Screen N] label of the image that contains the target element.
+Example (element is on Screen 2): [POINT:750,300:Settings Button:screen2]
+If there is only one screen, you may omit :screenN.
+Coordinates are always on the 0-1000 scale relative to that specific screen's image.
 `;
 
 // ── Claude ────────────────────────────────────────────────────────────────────

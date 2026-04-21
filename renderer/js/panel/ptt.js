@@ -70,6 +70,17 @@ export function createPttController({
         `wss://streaming.assemblyai.com/v3/ws?sample_rate=16000&token=${token}`,
       );
 
+      let finalTranscript = "";
+      let cleanupDone = false;
+
+      function doCleanup() {
+        if (cleanupDone) return;
+        cleanupDone = true;
+        try { socket.close(); } catch (_ignored) { /* socket may already be closed */ }
+        stream.getTracks().forEach((track) => track.stop());
+        audioContext.close();
+      }
+
       socket.onopen = () => source.connect(processor);
       processor.connect(audioContext.destination);
 
@@ -81,7 +92,6 @@ export function createPttController({
         socket.send(pcm);
       };
 
-      let finalTranscript = "";
       socket.onmessage = (event) => {
         const message = JSON.parse(event.data);
         if (message.type === "FinalTranscript" && message.text) {
@@ -92,10 +102,24 @@ export function createPttController({
         }
       };
 
+      socket.onerror = (event) => {
+        log("stt:assemblyai ws error", event);
+        ui.showToast("AssemblyAI connection error", true);
+        doCleanup();
+        stopPTT();
+      };
+
+      socket.onclose = (event) => {
+        log("stt:assemblyai ws closed", { code: event.code, reason: event.reason });
+        doCleanup();
+        // If still recording when socket closes unexpectedly, stop PTT gracefully.
+        if (state.isRecording()) {
+          stopPTT();
+        }
+      };
+
       state.setPttCleanup(() => {
-        socket.close();
-        stream.getTracks().forEach((track) => track.stop());
-        audioContext.close();
+        doCleanup();
         const text = finalTranscript.trim();
         if (text) {
           messaging.sendMessage(text);
@@ -104,7 +128,13 @@ export function createPttController({
     } catch (error) {
       ui.showToast("AssemblyAI error: " + error.message, true);
       log("stt:assemblyai error", error);
-      stopPTT();
+      // Force-reset recording state even if stopPTT early-returns.
+      state.setRecording(false);
+      dom.pttBtn.classList.remove("recording");
+      dom.waveform.style.display = "none";
+      dom.pttBtn.childNodes[0].textContent = "⏺";
+      api.send("update-widget-state", "idle");
+      ui.stopWaveformAnimation();
     }
   }
 

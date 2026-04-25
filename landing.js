@@ -1,5 +1,12 @@
 const modules = [
   {
+    title: "Plugin Workspaces",
+    description: "A growing plugin system for specialized task execution.",
+    meta: ["Browser plugin live today", "More plugins can be added later"],
+    icon: "plugins",
+    priority: "core"
+  },
+  {
     title: "Fast Mode",
     description: "Instant answers for quick tasks.",
     meta: ["Low-latency replies", "Uses recent context"],
@@ -19,6 +26,12 @@ const modules = [
     meta: ["Session-aware responses", "Recent history memory"],
     icon: "history",
     priority: "core"
+  },
+  {
+    title: "Browser Automation",
+    description: "The first live plugin uses browser-use for web tasks.",
+    meta: ["Approval mode or autopilot", "Live browser substep progress"],
+    icon: "browser"
   },
   {
     title: "Screen-Aware Guidance",
@@ -68,10 +81,16 @@ const configureSteps = [
     tip: "Tip: start with one provider first, then add others."
   },
   {
+    title: "Plugin Setup",
+    description: "Enable the plugin features you want to use.",
+    checklist: ["Open Settings > Plugins", "Use the Browser plugin today", "Download its runtime once before the first browser task"],
+    tip: "Tip: the Browser plugin is the first live plugin, but the system is designed to grow over time."
+  },
+  {
     title: "Mode Selection",
-    description: "Choose when to use Fast Mode vs Planning Mode.",
-    checklist: ["Fast Mode for short, direct asks", "Planning Mode for multi-step goals", "Switch mode from the main panel anytime"],
-    tip: "Tip: keep Fast Mode as default for daily quick tasks."
+    description: "Choose when to use Fast, Planning, or plugin execution.",
+    checklist: ["Fast Mode for short, direct asks", "Planning Mode for multi-step goals", "Use plugin execution when a specialized workspace fits the task"],
+    tip: "Tip: keep Fast Mode as default for daily quick tasks, then switch when the task needs more structure."
   },
   {
     title: "Voice & Audio",
@@ -81,8 +100,8 @@ const configureSteps = [
   },
   {
     title: "Context & History",
-    description: "Tune how much recent context is used during replies.",
-    checklist: ["Keep recent conversation history enabled", "Review active session state after long tasks", "Clear history when switching unrelated topics"],
+    description: "Tune how much recent context is used during replies and long tasks.",
+    checklist: ["Keep recent conversation history enabled", "Review active session state after plugin or planning runs", "Clear history when switching unrelated topics"],
     tip: "Tip: concise history often gives faster, cleaner answers."
   }
 ];

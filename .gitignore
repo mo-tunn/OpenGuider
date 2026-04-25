@@ -57,5 +57,7 @@ coverage/
 .cache/
 .eslintcache
 .parcel-cache/
+__pycache__/
+*.pyc
 tmp/
 temp/

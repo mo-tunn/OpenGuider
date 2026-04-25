@@ -1,6 +1,6 @@
 {
   "name": "openguider",
-  "version": "0.2.15",
+  "version": "0.3.0",
   "description": "OpenGuider AI Companion",
   "author": "Metehan Kızılcık",
   "license": "Apache-2.0",
@@ -48,8 +48,10 @@
       "main.js",
       "preload.js",
       "renderer/**/*",
+      "scripts/**/*",
       "src/**/*",
-      "package.json"
+      "package.json",
+      "THIRD_PARTY_LICENSES.md"
     ],
     "extraMetadata": {
       "main": "main.js"

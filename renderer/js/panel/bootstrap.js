@@ -5,9 +5,121 @@ import { createPanelState } from "./state.js";
 import { createTtsPlaybackController } from "./tts.js";
 import { createPanelUI, queryPanelDom } from "./ui.js";
 
+const BROWSER_EXECUTION_TERMINAL_STATUSES = new Set(["success", "failed", "aborted"]);
+const MODE_BAR_HIDE_DELAY_MS = 150;
+
 function createPanelLogger() {
   return (...args) => {
     console.log("[OpenGuider][panel]", ...args);
+  };
+}
+
+function isActiveBrowserExecution(browserExecution) {
+  return Boolean(browserExecution) && !BROWSER_EXECUTION_TERMINAL_STATUSES.has(browserExecution.status);
+}
+
+function getModeBarPluginLabel(browserExecution) {
+  const pluginId = String(
+    browserExecution?.pluginId
+    || browserExecution?.pluginName
+    || browserExecution?.pluginType
+    || "browser",
+  ).toLowerCase();
+
+  if (pluginId.includes("desktop")) {
+    return "◈ DESKTOP EXECUTING";
+  }
+  if (pluginId.includes("cli")) {
+    return "▸ CLI EXECUTING";
+  }
+  return "⬡ BROWSER EXECUTING";
+}
+
+function getTrustPresentation(trustLevel) {
+  if (trustLevel === "autopilot") {
+    return {
+      label: "● AUTOPILOT",
+      tone: "autopilot",
+      noticeLabel: "autopilot",
+    };
+  }
+  if (trustLevel === "paranoid") {
+    return {
+      label: "● PARANOID",
+      tone: "paranoid",
+      noticeLabel: "paranoid",
+    };
+  }
+  return {
+    label: "● SUPERVISED",
+    tone: "supervised",
+    noticeLabel: "supervised",
+  };
+}
+
+function getCurrentBrowserStepNumber(browserExecution) {
+  const substeps = Array.isArray(browserExecution?.substeps) ? browserExecution.substeps : [];
+  if (substeps.length === 0) {
+    return 0;
+  }
+
+  const running = substeps.find((substep) => substep?.status === "running");
+  if (running?.stepNumber) {
+    return Number(running.stepNumber) || 0;
+  }
+
+  return Number(substeps[substeps.length - 1]?.stepNumber) || substeps.length;
+}
+
+function formatModeBarStep(stepNumber) {
+  const safeStep = Number.isFinite(Number(stepNumber)) ? Math.max(0, Number(stepNumber)) : 0;
+  return `STEP ${safeStep} / ?`;
+}
+
+function normalizeInlineText(text) {
+  return String(text || "").trim().replace(/\s+/g, " ");
+}
+
+function getBrowserExecutionTerminalSummary(browserExecution) {
+  const finalMessage = normalizeInlineText(browserExecution?.finalMessage);
+  if (finalMessage) {
+    return finalMessage;
+  }
+
+  const goal = normalizeInlineText(browserExecution?.goal);
+  if (goal) {
+    return goal;
+  }
+
+  return browserExecution?.status === "success"
+    ? "Task completed."
+    : "Task finished with issues.";
+}
+
+function createStepApprovalController({ dom, log, win = window }) {
+  const StepApprovalCardCtor = win.StepApprovalCard;
+  if (!dom.stepApprovalCard || !dom.stepApprovalSection) {
+    return {
+      syncBrowserExecution() {},
+    };
+  }
+
+  if (typeof StepApprovalCardCtor !== "function") {
+    log("step-approval:component unavailable");
+    return {
+      syncBrowserExecution() {},
+    };
+  }
+
+  const card = new StepApprovalCardCtor(dom.stepApprovalCard, dom.stepApprovalSection);
+
+  return {
+    syncBrowserExecution(browserExecution) {
+      const status = browserExecution?.status || null;
+      if (!browserExecution || status === "success" || status === "failed" || status === "aborted") {
+        card.hide();
+      }
+    },
   };
 }
 
@@ -22,9 +134,12 @@ export function createPanelController({
 
   const ui = createPanelUI({ api, doc, dom, log, state });
   const planView = createPlanView({ doc, dom });
+  const stepApproval = createStepApprovalController({ dom, log, win });
   const messaging = createMessagingController({ api, doc, dom, log, state, ui });
   const tts = createTtsPlaybackController({ api, log, state, win });
   const ptt = createPttController({ api, dom, log, messaging, state, ui, win });
+  let lastBrowserExecutionSnapshot = null;
+  let modeBarHideTimer = null;
 
   function getActionShortcutMap() {
     return [
@@ -64,12 +179,127 @@ export function createPanelController({
     dom.btnPlanCancel.disabled = !enabled;
   }
 
-  function updatePlanActionVisibility(assistantMode) {
+  function updatePlanActionVisibility(assistantMode, sessionSnapshot = null) {
     if (!dom.panelActions) {
       return;
     }
-    const showActions = assistantMode === "planning";
+
+    const snapshot = sessionSnapshot || state.getSessionSnapshot() || {
+      activePlan: state.getActivePlan(),
+      browserExecution: state.getBrowserExecution(),
+    };
+    const currentStep = snapshot?.activePlan?.steps?.[snapshot?.activePlan?.currentStepIndex];
+    const showActions = assistantMode === "planning"
+      && !snapshot?.browserExecution
+      && Boolean(currentStep);
     dom.panelActions.classList.toggle("hidden", !showActions);
+  }
+
+  function updateModeBarStepCounter(stepNumber) {
+    if (!dom.modeBarStep) {
+      return;
+    }
+    dom.modeBarStep.textContent = formatModeBarStep(stepNumber);
+  }
+
+  function showModeBar(browserExecution) {
+    if (!dom.modeBar) {
+      return;
+    }
+
+    const trust = getTrustPresentation(browserExecution?.trustLevel);
+    const shouldAnimateIn = dom.modeBar.classList.contains("hidden") || dom.modeBar.classList.contains("is-leaving");
+    if (modeBarHideTimer) {
+      win.clearTimeout(modeBarHideTimer);
+      modeBarHideTimer = null;
+    }
+
+    dom.modeBarPlugin.textContent = getModeBarPluginLabel(browserExecution);
+    dom.modeBarTrust.textContent = trust.label;
+    dom.modeBarTrust.dataset.tone = trust.tone;
+    updateModeBarStepCounter(getCurrentBrowserStepNumber(browserExecution));
+
+    dom.modeBar.classList.remove("hidden", "is-leaving");
+    dom.modeBar.setAttribute("aria-hidden", "false");
+    if (shouldAnimateIn) {
+      dom.modeBar.classList.remove("is-sweeping");
+      void dom.modeBar.offsetWidth;
+      dom.modeBar.classList.add("is-visible", "is-sweeping");
+      win.setTimeout(() => {
+        dom.modeBar?.classList.remove("is-sweeping");
+      }, 320);
+    } else {
+      dom.modeBar.classList.add("is-visible");
+    }
+  }
+
+  function hideModeBar() {
+    if (!dom.modeBar || dom.modeBar.classList.contains("hidden")) {
+      return;
+    }
+
+    if (modeBarHideTimer) {
+      win.clearTimeout(modeBarHideTimer);
+    }
+
+    dom.modeBar.classList.remove("is-visible", "is-sweeping");
+    dom.modeBar.classList.add("is-leaving");
+    dom.modeBar.setAttribute("aria-hidden", "true");
+
+    modeBarHideTimer = win.setTimeout(() => {
+      dom.modeBar?.classList.add("hidden");
+      dom.modeBar?.classList.remove("is-leaving");
+      modeBarHideTimer = null;
+    }, MODE_BAR_HIDE_DELAY_MS);
+  }
+
+  function injectBrowserExecutionNotice(previousExecution, nextExecution) {
+    const wasActive = isActiveBrowserExecution(previousExecution);
+    const isActive = isActiveBrowserExecution(nextExecution);
+
+    if (!wasActive && isActive) {
+      const trust = getTrustPresentation(nextExecution?.trustLevel);
+      ui.injectSystemNotice(`⬡ Browser automation started · ${trust.noticeLabel}`, "start");
+      return;
+    }
+
+    if (!wasActive) {
+      return;
+    }
+
+    const nextStatus = nextExecution?.status || null;
+    if (!nextStatus || !BROWSER_EXECUTION_TERMINAL_STATUSES.has(nextStatus)) {
+      return;
+    }
+
+    const stepCount = Array.isArray(nextExecution?.substeps) ? nextExecution.substeps.length : 0;
+    const summary = getBrowserExecutionTerminalSummary(nextExecution);
+    const prefix = nextStatus === "success" ? "⬡ Done" : "⬡ Failed";
+    ui.injectSystemNotice(
+      `${prefix} · ${stepCount} step${stepCount === 1 ? "" : "s"} · ${summary}`,
+      nextStatus === "success" ? "success" : "error",
+      { richText: true },
+    );
+  }
+
+  function syncBrowserExecution(browserExecution) {
+    const activeExecution = isActiveBrowserExecution(browserExecution) ? browserExecution : null;
+    state.setBrowserExecution(activeExecution);
+    if (dom.panelRoot) {
+      dom.panelRoot.classList.toggle("browser-task-active", Boolean(activeExecution));
+    }
+    if (browserExecution) {
+      planView.renderBrowserExecution(browserExecution);
+    } else {
+      planView.clearBrowserExecution();
+    }
+    if (activeExecution) {
+      showModeBar(activeExecution);
+    } else {
+      hideModeBar();
+    }
+    stepApproval.syncBrowserExecution(browserExecution || null);
+    updatePlanActionVisibility(state.getSetting("assistantMode") || "fast");
   }
 
   function bindEvents() {
@@ -233,16 +463,31 @@ export function createPanelController({
 
     api.on("session-updated", (snapshot) => {
       log("ipc:session-updated received");
+      injectBrowserExecutionNotice(lastBrowserExecutionSnapshot, snapshot?.browserExecution || null);
+      lastBrowserExecutionSnapshot = snapshot?.browserExecution || null;
       messaging.syncSession(snapshot);
       planView.renderPlan(snapshot?.activePlan || null);
+      syncBrowserExecution(snapshot?.browserExecution || null);
       ui.renderAgentState(snapshot?.status || "idle");
+      updatePlanActionVisibility(state.getSetting("assistantMode") || "fast", snapshot);
       updatePlanActionButtons(snapshot);
+    });
+
+    api.on("execution:substep-progress", (substep) => {
+      if (!isActiveBrowserExecution(lastBrowserExecutionSnapshot)) {
+        return;
+      }
+      updateModeBarStepCounter(substep?.stepNumber || getCurrentBrowserStepNumber(lastBrowserExecutionSnapshot));
     });
 
     api.on("plan-updated", (plan) => {
       log("ipc:plan-updated received");
       state.setActivePlan(plan || null);
       planView.renderPlan(plan || null);
+      updatePlanActionVisibility(state.getSetting("assistantMode") || "fast", {
+        activePlan: plan || null,
+        browserExecution: state.getBrowserExecution(),
+      });
     });
 
     api.on("agent-state-changed", (nextState) => {
@@ -285,6 +530,8 @@ export function createPanelController({
     ui.updateProviderDot();
     ui.renderConversation(session?.messages || []);
     planView.renderPlan(session?.activePlan || null);
+    lastBrowserExecutionSnapshot = session?.browserExecution || null;
+    syncBrowserExecution(session?.browserExecution || null);
     ui.renderAgentState(session?.status || "idle");
     applyShortcutTitles();
     updatePlanActionButtons(session);
@@ -292,7 +539,7 @@ export function createPanelController({
     dom.assistantModeSelect.value = assistantMode;
     state.setSetting("assistantMode", assistantMode);
     state.setSetting("planningModeEnabled", assistantMode === "planning");
-    updatePlanActionVisibility(assistantMode);
+    updatePlanActionVisibility(assistantMode, session);
     dom.sendBtn.disabled = false;
     dom.pttBtn.disabled = false;
     state.setIncludeScreen(settings?.includeScreenshotByDefault !== false);

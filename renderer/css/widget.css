@@ -138,6 +138,15 @@ html, body {
   color: #67e8f9;
 }
 
+.status-text[data-status="success"] {
+  color: #4ade80;
+}
+
+.status-text[data-status="failed"],
+.status-text[data-status="aborted"] {
+  color: #f87171;
+}
+
 .goal-text {
   font-size: 10px;
   color: var(--text);
@@ -145,6 +154,13 @@ html, body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.browser-progress {
+  font-size: 10px;
+  color: rgba(232, 98, 26, 0.72);
+  letter-spacing: 0.7px;
+  text-transform: lowercase;
 }
 
 .widget-details {
@@ -200,6 +216,7 @@ html, body {
   color: var(--text-dim);
   line-height: 1.4;
   min-height: 34px;
+  white-space: pre-wrap;
 }
 
 .step-progress {
@@ -303,6 +320,20 @@ html, body {
   color: #fff;
 }
 
+.widget.browser-exec-active .action-row,
+.widget.browser-exec-active .chat-entry-btn {
+  display: none;
+}
+
+#status-text.browser-status-pulse {
+  color: #e8621a;
+  animation: statusPulse 2s ease-in-out infinite;
+}
+
+.status-logo.completion-flash {
+  animation: completionFlash 0.4s ease-out;
+}
+
 .widget.listening {
   border-color: var(--accent);
   box-shadow:
@@ -382,5 +413,32 @@ html, body {
   50% {
     transform: scale(1.02);
     opacity: 0.9;
+  }
+}
+
+@keyframes statusPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+@keyframes completionFlash {
+  0% {
+    opacity: 1;
+    filter: brightness(1);
+    transform: scale(1);
+  }
+  45% {
+    opacity: 1;
+    filter: brightness(1.85);
+    transform: scale(1.08);
+  }
+  100% {
+    opacity: 1;
+    filter: brightness(1);
+    transform: scale(1);
   }
 }

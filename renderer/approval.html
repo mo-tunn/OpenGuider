@@ -1,0 +1,40 @@
+<!-- DEPRECATED: This file is no longer loaded. Approval UI moved to
+     renderer/index.html. Safe to delete after verification. -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenGuider — Step Approval</title>
+  <link rel="stylesheet" href="components/step-approval/step-approval.css">
+  <link rel="stylesheet" href="components/execution-log/execution-log.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Step approval card — shown when a step is pending user decision -->
+    <div id="approval-section" class="hidden">
+      <div id="step-approval-card"></div>
+    </div>
+
+    <!-- Execution log — always visible -->
+    <div id="log-section">
+      <div id="execution-log"></div>
+    </div>
+  </div>
+
+  <script src="components/step-approval/StepApprovalCard.js"></script>
+  <script src="components/execution-log/ExecutionLog.js"></script>
+  <script>
+    // Bootstrap both components once DOM is ready
+    document.addEventListener('DOMContentLoaded', () => {
+      window.__approvalCard = new StepApprovalCard(
+        document.getElementById('step-approval-card'),
+        document.getElementById('approval-section')
+      );
+      window.__executionLog = new ExecutionLog(
+        document.getElementById('execution-log')
+      );
+    });
+  </script>
+</body>
+</html>

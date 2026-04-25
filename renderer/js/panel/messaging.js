@@ -123,17 +123,24 @@ export function createMessagingController({
     ui.hideErrorBanner();
     dom.textInput.value = "";
     dom.textInput.style.height = "auto";
-    state.setStreaming(true);
+    const planningEnabled = assistantMode === "planning";
+    state.setStreaming(!planningEnabled);
     
-    dom.sendBtn.classList.add("hidden");
     const stopBtn = doc.getElementById("stop-btn");
-    if (stopBtn) stopBtn.classList.remove("hidden");
-    dom.sendBtn.disabled = true;
+    if (planningEnabled) {
+      dom.sendBtn.classList.remove("hidden");
+      if (stopBtn) stopBtn.classList.add("hidden");
+      dom.sendBtn.disabled = true;
+    } else {
+      dom.sendBtn.classList.add("hidden");
+      if (stopBtn) stopBtn.classList.remove("hidden");
+      dom.sendBtn.disabled = true;
+    }
     
     ui.renderAgentState("thinking");
 
-currentAbortController = new AbortController();
-    requestTimeoutId = window.setTimeout(() => {
+    currentAbortController = planningEnabled ? null : new AbortController();
+    requestTimeoutId = planningEnabled ? null : window.setTimeout(() => {
       if (state.isStreaming()) {
         log("ai:send-message timeout 60s triggered");
         cancelMessage();
@@ -146,9 +153,9 @@ currentAbortController = new AbortController();
       hasImages: Boolean(images && images.length),
       historyCount: state.getConversationHistory().length,
       textLength: rawText.length,
+      planningEnabled,
     });
 
-    const planningEnabled = assistantMode === "planning";
     try {
       ui.appendUserMessage(rawText);
       state.addConversationMessage({ role: "user", content: rawText });
@@ -176,6 +183,12 @@ currentAbortController = new AbortController();
       if (requestTimeoutId) {
         clearTimeout(requestTimeoutId);
         requestTimeoutId = null;
+      }
+      if (planningEnabled) {
+        state.setStreaming(false);
+        dom.sendBtn.classList.remove("hidden");
+        if (stopBtn) stopBtn.classList.add("hidden");
+        dom.sendBtn.disabled = false;
       }
       if (typingId !== null) {
         ui.removeTypingIndicator(typingId);

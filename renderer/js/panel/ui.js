@@ -17,8 +17,16 @@ const BLINK_ASSETS = [
 
 export function queryPanelDom(doc = document) {
   return {
+    panelRoot: doc.querySelector(".panel"),
     agentStatus: doc.getElementById("agent-status"),
     assistantModeSelect: doc.getElementById("assistant-mode-select"),
+    modeBar: doc.getElementById("mode-bar"),
+    modeBarPlugin: doc.getElementById("mode-bar-plugin"),
+    modeBarTrust: doc.getElementById("mode-bar-trust"),
+    modeBarStep: doc.getElementById("mode-bar-step"),
+    browserTaskView: doc.getElementById("browser-task-view"),
+    stepApprovalSection: doc.getElementById("step-approval-section"),
+    stepApprovalCard: doc.getElementById("step-approval-card"),
     chatArea: doc.getElementById("chat-area"),
     chatMessages: doc.getElementById("chat-messages"),
     chatBackground: doc.getElementById("chat-background"),
@@ -392,6 +400,32 @@ export function createPanelUI({ api, doc = document, dom, log, state }) {
     scrollToBottom();
   }
 
+  function injectSystemNotice(text, type = "info", options = {}) {
+    if (!dom.chatMessages) {
+      return null;
+    }
+
+    const notice = doc.createElement("div");
+    notice.className = `system-notice system-notice-${type}`;
+    if (options?.richText) {
+      notice.classList.add("system-notice-rich");
+    }
+
+    const textNode = doc.createElement("span");
+    textNode.className = "system-notice-text";
+    if (options?.richText) {
+      textNode.innerHTML = simpleMarkdown(text);
+    } else {
+      textNode.textContent = text;
+    }
+
+    notice.appendChild(textNode);
+    dom.chatMessages.appendChild(notice);
+    updateChatBackgroundState(dom.chatMessages.childElementCount);
+    scrollToBottom();
+    return notice;
+  }
+
   function showTypingIndicator() {
     const id = state.nextTypingId();
     const element = doc.createElement("div");
@@ -460,6 +494,9 @@ export function createPanelUI({ api, doc = document, dom, log, state }) {
     };
 
     let rendered = String(text || "")
+      .replace(/\r\n/g, "\n")
+      .replace(/\\n/g, "\n")
+      .replace(/\\t/g, "  ")
       .replace(/\[POINT:[^\]]+\]/gi, "")
       .replace(/\{[^{}]*"point"\s*:\s*\[\d+,\s*\d+\][^{}]*"label"\s*:\s*"[^"]+"[^{}]*\}/gi, "")
       .replace(/&/g, "&amp;")
@@ -648,6 +685,7 @@ export function createPanelUI({ api, doc = document, dom, log, state }) {
     applyAssistantContent,
     appendAssistantMessage,
     appendErrorMessage,
+    injectSystemNotice,
     appendRawElement,
     appendUserMessage,
     buildModelSelector,

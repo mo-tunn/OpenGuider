@@ -4,6 +4,7 @@ export function createPanelState() {
     conversationHistory: [],
     sessionSnapshot: null,
     activePlan: null,
+    browserExecution: null,
     agentState: "idle",
     pointer: null,
     pendingScreenshots: null,
@@ -61,6 +62,7 @@ export function createPanelState() {
     state.sessionSnapshot = snapshot || null;
     state.conversationHistory = Array.isArray(snapshot?.messages) ? snapshot.messages.slice() : [];
     state.activePlan = snapshot?.activePlan || null;
+    state.browserExecution = snapshot?.browserExecution || null;
     state.agentState = snapshot?.status || "idle";
     state.pointer = snapshot?.lastPointer || null;
   }
@@ -79,6 +81,14 @@ export function createPanelState() {
 
   function setAgentState(value) {
     state.agentState = value || "idle";
+  }
+
+  function getBrowserExecution() {
+    return state.browserExecution;
+  }
+
+  function setBrowserExecution(value) {
+    state.browserExecution = value || null;
   }
 
   function getPointer() {
@@ -216,6 +226,7 @@ export function createPanelState() {
     appendStreamingText,
     getActivePlan,
     getAgentState,
+    getBrowserExecution,
     clearConversationHistory,
     clearGoogleAudioQueue,
     clearStreamingSession,
@@ -241,6 +252,7 @@ export function createPanelState() {
     runPttCleanup,
     setActivePlan,
     setAgentState,
+    setBrowserExecution,
     setGoogleCurrentAudio,
     setIncludeScreen,
     setPendingScreenshots,

@@ -29,6 +29,14 @@
     <button class="clear-btn" id="btn-clear" title="Clear Conversation">🗑</button>
   </div>
 
+  <div class="mode-bar hidden" id="mode-bar" aria-hidden="true">
+    <div class="mode-bar-section mode-bar-left" id="mode-bar-plugin">⬡ BROWSER EXECUTING</div>
+    <div class="mode-bar-section mode-bar-center">
+      <span class="mode-bar-badge" id="mode-bar-trust">● AUTOPILOT</span>
+    </div>
+    <div class="mode-bar-section mode-bar-right" id="mode-bar-step">STEP 0 / ?</div>
+  </div>
+
   <!-- Chat messages -->
   <div class="chat-area" id="chat-area">
     <div class="chat-background" id="chat-background">
@@ -38,6 +46,11 @@
       </div>
     </div>
     <div class="chat-messages" id="chat-messages"></div>
+  </div>
+
+  <div class="browser-task-view hidden" id="browser-task-view"></div>
+  <div class="approval-section hidden" id="step-approval-section">
+    <div id="step-approval-card"></div>
   </div>
 
   <div class="plan-panel hidden" id="plan-panel">
@@ -122,6 +135,7 @@
   </div>
 </div>
 
+<script src="components/step-approval/StepApprovalCard.js"></script>
 <script type="module" src="js/app.js"></script>
 </body>
 </html>

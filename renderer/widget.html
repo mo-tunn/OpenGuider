@@ -18,6 +18,7 @@
         <span class="mini-loader hidden" id="widget-loader"></span>
       </div>
       <div class="goal-text" id="goal-text">No active plan</div>
+      <div class="browser-progress hidden" id="browser-progress">step 0</div>
     </div>
     <div class="controls" id="controls">
       <button class="control-btn" id="btn-show-plan" title="Show plan">
@@ -34,7 +35,7 @@
   </div>
 
   <div class="widget-details hidden" id="widget-details">
-    <div class="step-card">
+    <div class="step-card" id="step-card">
       <div class="step-title" id="step-title">Waiting for a task</div>
       <div class="step-instruction" id="step-instruction">Ask for a goal and I will create a step-by-step plan.</div>
       <div class="step-progress" id="step-progress">0/0</div>
@@ -44,7 +45,7 @@
       Open Chat
     </button>
 
-    <div class="action-row">
+    <div class="action-row" id="action-row">
       <button class="action-btn" id="btn-prev" title="Previous step">
         <span class="icon">←</span>
       </button>

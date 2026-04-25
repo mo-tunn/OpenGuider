@@ -1,0 +1,284 @@
+/* ── step-approval.css ────────────────────────────────────────────────────── */
+
+/* Google Font */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-base:       #0e0e14;
+  --bg-surface:    rgba(255,255,255,0.06);
+  --bg-surface-hv: rgba(255,255,255,0.10);
+  --border:        rgba(255,255,255,0.10);
+  --text-primary:  #f0f0f5;
+  --text-muted:    #8b8b9e;
+  --accent:        #7c3aed;
+  --accent-hv:     #6d28d9;
+  --danger:        #ef4444;
+  --danger-hv:     #dc2626;
+  --skip:          rgba(255,255,255,0.08);
+  --skip-hv:       rgba(255,255,255,0.14);
+  --radius-lg:     16px;
+  --radius-md:     10px;
+  --radius-sm:     6px;
+  --shadow:        0 8px 32px rgba(0,0,0,0.45);
+}
+
+html, body {
+  height: 100%;
+  background: transparent;
+  font-family: 'Inter', system-ui, sans-serif;
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  min-height: 100%;
+}
+
+/* ── Visibility ── */
+.hidden { display: none !important; }
+
+/* ── Approval Card ── */
+.approval-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  animation: slideIn 0.22s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-10px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)     scale(1); }
+}
+
+/* Header */
+.approval-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.risk-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.risk-icon { font-size: 13px; }
+
+.approval-title {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.risk-number {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* Description */
+.approval-description {
+  padding: 14px 16px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-primary);
+  font-weight: 500;
+  word-break: break-word;
+}
+
+/* Screenshot preview */
+.screenshot-preview {
+  padding: 0 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.screenshot-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.screenshot-thumb {
+  width: 100%;
+  max-width: 100%;
+  height: 110px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: transform 0.18s ease, height 0.25s ease;
+}
+
+.screenshot-thumb:hover { transform: scale(1.015); }
+
+.screenshot-thumb.expanded {
+  height: auto;
+  max-height: 320px;
+  object-fit: contain;
+}
+
+/* Payload editor */
+.payload-editor {
+  padding: 0 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  animation: fadeIn 0.15s ease both;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.payload-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.payload-textarea {
+  background: rgba(0,0,0,0.35);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: #d0d0e0;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  padding: 10px;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.payload-textarea:focus { border-color: var(--accent); }
+
+.payload-error {
+  font-size: 12px;
+  color: var(--danger);
+  padding: 4px 0;
+}
+
+/* Trust toggle */
+.trust-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 0 16px 14px;
+  cursor: pointer;
+}
+
+.trust-toggle input[type="checkbox"] {
+  margin-top: 2px;
+  accent-color: var(--accent);
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.trust-toggle-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  user-select: none;
+}
+
+/* Action buttons */
+.approval-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 0 14px 14px;
+}
+
+.btn {
+  padding: 9px 12px;
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.14s ease, transform 0.1s ease, box-shadow 0.14s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  outline: none;
+}
+
+.btn:active { transform: scale(0.97); }
+
+.btn:focus-visible {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+kbd {
+  font-family: inherit;
+  font-size: 10px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 4px;
+  padding: 1px 5px;
+  color: var(--text-muted);
+}
+
+/* Approve */
+.btn-approve {
+  background: var(--accent);
+  color: #fff;
+  grid-column: 1 / -1;
+  padding: 11px;
+  font-size: 14px;
+}
+.btn-approve:hover { background: var(--accent-hv); box-shadow: 0 4px 16px rgba(124,58,237,0.4); }
+
+/* Edit */
+.btn-edit {
+  background: var(--bg-surface-hv);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+.btn-edit:hover { background: rgba(255,255,255,0.15); }
+
+/* Skip */
+.btn-skip {
+  background: var(--skip);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+.btn-skip:hover { background: var(--skip-hv); color: var(--text-primary); }
+
+/* Abort */
+.btn-abort {
+  background: rgba(239,68,68,0.12);
+  color: var(--danger);
+  border: 1px solid rgba(239,68,68,0.25);
+}
+.btn-abort:hover { background: rgba(239,68,68,0.22); }

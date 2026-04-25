@@ -3,6 +3,8 @@
 let settings = {};
 let activeProvider = "claude";
 let recordingButton = null;
+const EXECUTION_MODE_HITL = "hitl";
+const EXECUTION_MODE_AUTO = "auto";
 
 const toast = document.getElementById("toast");
 let toastTimer;
@@ -62,6 +64,14 @@ async function init() {
   document.getElementById("skipCurrentStepShortcut").value = settings.skipCurrentStepShortcut || "Ctrl+Alt+6";
   document.getElementById("regenerateCurrentStepShortcut").value = settings.regenerateCurrentStepShortcut || "Ctrl+Alt+7";
 
+  // Plugin fields
+  const executionMode = normalizeExecutionMode(settings.executionMode);
+  document.getElementById("executionMode").value = executionMode;
+  document.getElementById("trustLevel").value = normalizeTrustLevel(settings.trustLevel, executionMode);
+  document.getElementById("browserAgentEnabled").checked = settings.browserAgentEnabled !== false;
+  document.getElementById("browserHeadless").checked = settings.browserHeadless === true;
+  document.getElementById("awareAssistanceEnabled").checked = settings.awareAssistanceEnabled === true;
+
   setSelectValue("sttProvider", normalizeSttProvider(settings.sttProvider));
   setSelectValue("ttsProvider", settings.ttsProvider || "google");
 
@@ -84,6 +94,9 @@ async function init() {
   document.getElementById("ttsProvider").addEventListener("change", toggleElevenLabs);
   document.getElementById("ttsVolume").addEventListener("input", updateTtsVolumeLabel);
   document.getElementById("ttsRate").addEventListener("input", updateTtsRateLabel);
+  document.getElementById("executionMode").addEventListener("change", updateExecutionModeUi);
+  document.getElementById("trustLevel").addEventListener("change", updateExecutionModeUi);
+  updateExecutionModeUi();
 
   document.getElementById("btn-save").addEventListener("click",   saveSettings);
   document.getElementById("btn-reset-all").addEventListener("click", resetAllSettings);
@@ -92,7 +105,47 @@ async function init() {
   document.getElementById("btn-refresh-metrics").addEventListener("click", refreshMetrics);
   document.getElementById("btn-reset-metrics").addEventListener("click", resetMetrics);
 
+  // Plugin UI
+  const agentStatusText = document.getElementById("browserAgentStatusText");
+  window.openguider.invoke("get-browser-agent-status").then((statusStr) => {
+    if (agentStatusText) agentStatusText.textContent = statusStr;
+  }).catch(() => {});
+  
+  window.openguider.on("browser-agent-status-changed", (newStatus) => {
+    if (agentStatusText) agentStatusText.textContent = newStatus;
+  });
+  
+  const progressEl = document.getElementById("agent-download-progress");
+  window.openguider.on("browser-agent-download-progress", (data) => {
+    if (!progressEl) return;
+    progressEl.classList.remove("hidden");
+    if (data.event === "progress") {
+      progressEl.textContent = `${data.step} (${data.percent}%)`;
+    } else if (data.event === "done") {
+      progressEl.textContent = "Download complete!";
+      progressEl.style.color = "#22c55e"; // Success green
+    } else if (data.event === "error") {
+      progressEl.textContent = "Error: " + data.message;
+      progressEl.style.color = "#ef4444"; // Error red
+    }
+  });
+
+  document.getElementById("btn-restart-agent")?.addEventListener("click", async () => {
+    if (agentStatusText) agentStatusText.textContent = "restarting...";
+    await window.openguider.invoke("restart-browser-agent");
+  });
+  
+  document.getElementById("btn-download-agent")?.addEventListener("click", async () => {
+    if (progressEl) {
+      progressEl.classList.remove("hidden");
+      progressEl.textContent = "Starting download...";
+      progressEl.style.color = "var(--accent)";
+    }
+    await window.openguider.invoke("download-browser-agent");
+  });
+
   bindSettingsTabs();
+  bindPluginCards();
   bindShortcutRecordButtons();
   await refreshMetrics();
 }
@@ -125,6 +178,51 @@ function normalizeTtsRate(value) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return 1.5;
   return Math.max(1, Math.min(2, numeric));
+}
+
+function normalizeExecutionMode(mode) {
+  if (mode === EXECUTION_MODE_AUTO) return EXECUTION_MODE_AUTO;
+  if (mode === EXECUTION_MODE_HITL || mode === "supervised" || mode === "guide" || mode === "human-in-the-loop") {
+    return EXECUTION_MODE_HITL;
+  }
+  return EXECUTION_MODE_HITL;
+}
+
+function normalizeTrustLevel(trustLevel, executionMode = EXECUTION_MODE_HITL) {
+  if (normalizeExecutionMode(executionMode) === EXECUTION_MODE_AUTO) {
+    return "autopilot";
+  }
+  return trustLevel === "paranoid" ? "paranoid" : "balanced";
+}
+
+function updateExecutionModeUi() {
+  const executionMode = normalizeExecutionMode(document.getElementById("executionMode")?.value);
+  const trustLevelSelect = document.getElementById("trustLevel");
+  const trustSection = document.getElementById("trustSettingsSection");
+  const executionModeDescription = document.getElementById("executionModeDescription");
+  const trustDescription = document.getElementById("trustLevelDescription");
+  const trustLevel = normalizeTrustLevel(trustLevelSelect?.value, executionMode);
+
+  if (trustLevelSelect) {
+    trustLevelSelect.value = trustLevel;
+    trustLevelSelect.disabled = executionMode === EXECUTION_MODE_AUTO;
+  }
+
+  if (trustSection) {
+    trustSection.style.display = executionMode === EXECUTION_MODE_AUTO ? "none" : "";
+  }
+
+  if (executionModeDescription) {
+    executionModeDescription.textContent = executionMode === EXECUTION_MODE_AUTO
+      ? "OpenGuider runs browser tasks fully automatically with 100% trust and does not wait for per-step approval."
+      : "OpenGuider runs the browser for you, but pauses according to your trust policy when human approval is needed.";
+  }
+
+  if (trustDescription) {
+    trustDescription.textContent = trustLevel === "paranoid"
+      ? "Every single browser step waits for your approval before it runs."
+      : "Low-risk steps continue automatically; risky steps pause so you can approve, re-plan, or abort.";
+  }
 }
 
 function updateTtsVolumeLabel() {
@@ -172,6 +270,38 @@ function bindSettingsTabs() {
       tabContents.forEach((section) => {
         section.classList.toggle("active", section.dataset.tabContent === target);
       });
+    });
+  });
+}
+
+function bindPluginCards() {
+  const pluginCards = [...document.querySelectorAll("[data-plugin-card]")];
+  const pluginPanels = [...document.querySelectorAll("[data-plugin-panel]")];
+
+  function setPluginPanelState(pluginId, expanded) {
+    pluginCards.forEach((card) => {
+      const isTarget = card.dataset.pluginCard === pluginId;
+      const trigger = card.querySelector(".plugin-card-trigger");
+      card.classList.toggle("is-open", Boolean(expanded) && isTarget);
+      trigger?.setAttribute("aria-expanded", Boolean(expanded) && isTarget ? "true" : "false");
+    });
+
+    pluginPanels.forEach((panel) => {
+      const isTarget = panel.dataset.pluginPanel === pluginId;
+      panel.classList.toggle("hidden", !(Boolean(expanded) && isTarget));
+    });
+  }
+
+  pluginCards.forEach((card) => {
+    const trigger = card.querySelector(".plugin-card-trigger");
+    trigger?.addEventListener("click", () => {
+      const pluginId = card.dataset.pluginCard;
+      const nextExpanded = trigger.getAttribute("aria-expanded") !== "true";
+      setPluginPanelState(pluginId, nextExpanded);
+
+      if (nextExpanded) {
+        card.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      }
     });
   });
 }
@@ -355,6 +485,8 @@ async function saveSettings() {
   };
 
   const activeModel = modelMap[activeProvider] || "";
+  const executionMode = normalizeExecutionMode(document.getElementById("executionMode").value);
+  const trustLevel = normalizeTrustLevel(document.getElementById("trustLevel").value, executionMode);
 
   const newSettings = {
     aiProvider:              activeProvider,
@@ -400,6 +532,11 @@ async function saveSettings() {
     previousStepShortcut: document.getElementById("previousStepShortcut").value.trim(),
     skipCurrentStepShortcut: document.getElementById("skipCurrentStepShortcut").value.trim(),
     regenerateCurrentStepShortcut: document.getElementById("regenerateCurrentStepShortcut").value.trim(),
+    executionMode,
+    trustLevel,
+    browserAgentEnabled:     document.getElementById("browserAgentEnabled").checked,
+    browserHeadless:         document.getElementById("browserHeadless").checked,
+    awareAssistanceEnabled:  document.getElementById("awareAssistanceEnabled").checked,
     includeScreenshotByDefault: true, // Always true — golden rule
   };
 

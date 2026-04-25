@@ -18,6 +18,8 @@
     <div class="settings-tabs">
       <button class="settings-tab-btn active" data-tab="provider">AI Provider</button>
       <button class="settings-tab-btn" data-tab="voice">Voice</button>
+      <button class="settings-tab-btn" data-tab="plugins">Plugins</button>
+      <button class="settings-tab-btn" data-tab="aware">Aware</button>
       <button class="settings-tab-btn" data-tab="shortcuts">Shortcuts</button>
     </div>
 
@@ -250,6 +252,147 @@
           />
           <span class="hint">Playback speed for all TTS providers (1.0x - 2.0x).</span>
         </div>
+      </div>
+    </div>
+
+    <div class="settings-tab-section" data-tab-content="plugins">
+      <div class="settings-section plugins-overview-section">
+        <h3>Plugins</h3>
+        <p class="settings-lead">OpenGuider can route tasks into specialized plugins. Browser automation is live today; more workspaces can plug in here later without changing your overall setup.</p>
+        <div class="plugin-grid">
+          <article class="plugin-card plugin-card-active plugin-card-expandable" data-plugin-card="browser">
+            <button class="plugin-card-trigger" type="button" aria-expanded="false" aria-controls="plugin-panel-browser">
+              <div class="plugin-card-header">
+                <div>
+                  <div class="plugin-card-title">Browser</div>
+                  <div class="plugin-card-subtitle">Web automation and browsing tasks</div>
+                </div>
+                <span class="plugin-card-state plugin-card-state-live">Live</span>
+              </div>
+              <p class="plugin-card-copy">Handles search, navigation, form filling, and multi-step browser workflows.</p>
+              <span class="plugin-card-action">Open settings</span>
+            </button>
+
+            <div class="plugin-card-panel hidden" id="plugin-panel-browser" data-plugin-panel="browser">
+              <div class="plugin-shell">
+                <div class="plugin-shell-header">
+                  <div>
+                    <div class="plugin-shell-title">Primary automation workspace</div>
+                    <div class="plugin-shell-subtitle">Controls the installed browser automation runtime and its execution behavior.</div>
+                  </div>
+                  <span class="plugin-badge">Installed</span>
+                </div>
+
+                <div class="plugin-layout">
+                  <section class="settings-card">
+                    <div class="settings-card-title">Runtime</div>
+                    <div class="form-group">
+                      <label class="toggle-card">
+                        <input type="checkbox" id="browserAgentEnabled" class="plugin-checkbox"/>
+                        <span class="toggle-copy">
+                          <strong>Enable browser plugin</strong>
+                          <span>Requires the Python runtime to be available on this machine.</span>
+                        </span>
+                      </label>
+                    </div>
+                    <div class="plugin-status-panel">
+                      <div class="plugin-status-line">
+                        <span class="plugin-status-label">Runtime status</span>
+                        <strong id="browserAgentStatusText" class="plugin-status-value">stopped</strong>
+                      </div>
+                      <div class="plugin-runtime-actions">
+                        <button class="record-shortcut-btn" id="btn-download-agent" type="button">Download Runtime</button>
+                        <button class="record-shortcut-btn" id="btn-restart-agent" type="button">Restart Runtime</button>
+                      </div>
+                      <div id="agent-download-progress" class="plugin-progress hidden"></div>
+                    </div>
+                  </section>
+
+                  <section class="settings-card">
+                    <div class="settings-card-title">Execution Policy</div>
+                    <div class="form-group">
+                      <label>Mode</label>
+                      <select class="form-select" id="executionMode">
+                        <option value="hitl">Human-in-the-loop (Stay in control)</option>
+                        <option value="auto">Autopilot Mode (Do it automatically)</option>
+                      </select>
+                      <span class="hint" id="executionModeDescription">OpenGuider runs the browser for you, but pauses when your selected trust policy says human approval is needed.</span>
+                    </div>
+                    <div class="form-group" id="trustSettingsSection">
+                      <label>Trust Level</label>
+                      <select class="form-select" id="trustLevel">
+                        <option value="paranoid">Don't Trust (Every step needs approval)</option>
+                        <option value="balanced">Balanced (Approve only risky steps)</option>
+                      </select>
+                      <span class="hint" id="trustLevelDescription">Safe read-only actions run automatically; anything that writes or submits pauses for your approval.</span>
+                    </div>
+                    <div class="form-group">
+                      <label class="toggle-card">
+                        <input type="checkbox" id="browserHeadless" class="plugin-checkbox"/>
+                        <span class="toggle-copy">
+                          <strong>Run in headless mode</strong>
+                          <span>Keep the browser invisible while the plugin works. Leave this off to watch the full browser window.</span>
+                        </span>
+                      </label>
+                    </div>
+                  </section>
+                </div>
+              </div>
+            </div>
+          </article>
+          <article class="plugin-card plugin-card-muted">
+            <div class="plugin-card-header">
+              <div>
+                <div class="plugin-card-title">CLI &amp; Coding</div>
+                <div class="plugin-card-subtitle">Terminal and code execution</div>
+              </div>
+              <span class="plugin-card-state">Soon</span>
+            </div>
+            <p class="plugin-card-copy">Reserved for shell tasks, repo actions, builds, tests, and local coding flows.</p>
+          </article>
+          <article class="plugin-card plugin-card-muted">
+            <div class="plugin-card-header">
+              <div>
+                <div class="plugin-card-title">Desktop Apps</div>
+                <div class="plugin-card-subtitle">Native app automation</div>
+              </div>
+              <span class="plugin-card-state">Soon</span>
+            </div>
+            <p class="plugin-card-copy">Space for tools like Photoshop, office apps, and other desktop-first workflows.</p>
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-tab-section" data-tab-content="aware">
+      <div class="settings-section aware-section">
+        <h3>Aware</h3>
+        <p class="settings-lead">Experimental screen-awareness for guide flows. This layer adds OCR, window context distillation, and pointer verification so OpenGuider does not rely only on raw LLM pointers.</p>
+        <section class="aware-shell">
+          <div class="aware-shell-header">
+            <div>
+              <div class="aware-shell-title">Aware Assistance</div>
+              <div class="aware-shell-subtitle">Applies only to Fast and Planning modes. Browser plugin execution is not affected.</div>
+            </div>
+            <span class="plugin-badge">Experimental</span>
+          </div>
+
+          <div class="settings-card aware-card">
+            <div class="settings-card-title">Runtime Toggle</div>
+            <div class="form-group">
+              <label class="toggle-card">
+                <input type="checkbox" id="awareAssistanceEnabled" class="plugin-checkbox"/>
+                <span class="toggle-copy">
+                  <strong>Enable Aware assistance</strong>
+                  <span>Turns on the pre-LLM and post-LLM safety layers together, including OCR, window/context analysis, embedding-based matching, and pointer verification.</span>
+                </span>
+              </label>
+            </div>
+            <div class="aware-note">
+              Use this only when you want extra screen-state validation. It is intentionally off by default while the feature is still being tuned.
+            </div>
+          </div>
+        </section>
       </div>
     </div>
 

@@ -54,6 +54,11 @@ const schema = {
   previousStepShortcut: { type:"string", default:"Ctrl+Alt+5" },
   skipCurrentStepShortcut: { type:"string", default:"Ctrl+Alt+6" },
   regenerateCurrentStepShortcut: { type:"string", default:"Ctrl+Alt+7" },
+  executionMode: { type:"string", enum:["hitl","auto"], default:"hitl" },
+  trustLevel: { type:"string", enum:["paranoid","balanced","autopilot"], default:"balanced" },
+  browserAgentEnabled: { type:"boolean", default:true },
+  browserHeadless: { type:"boolean", default:false },
+  awareAssistanceEnabled: { type:"boolean", default:false },
   includeScreenshotByDefault: { type:"boolean", default:true },
   systemPromptOverride: { type:"string", default:"" },
   planningModeEnabled: { type:"boolean", default:false },
@@ -64,4 +69,4 @@ const schema = {
   sessionSnapshotV1: { type: ["object", "null"], default: null },
 };
 function createStore() { return new Store({ schema, clearInvalidConfig: true }); }
-module.exports = { createStore };
+module.exports = { createStore, schema };

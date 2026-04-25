@@ -1,9 +1,12 @@
 const { EventEmitter } = require("events");
 
 const {
+  cloneBrowserExecution,
   cloneStep,
   createEmptySession,
   getCurrentStep,
+  normalizeBrowserExecution,
+  normalizeBrowserExecutionSubstep,
   normalizePlan,
 } = require("./session-schema");
 
@@ -28,6 +31,9 @@ class SessionManager extends EventEmitter {
             ...session.activePlan,
             steps: session.activePlan.steps.map((step, index) => cloneStep(step, index)),
           }
+        : null,
+      browserExecution: session.browserExecution
+        ? cloneBrowserExecution(session.browserExecution)
         : null,
       currentStepId: session.currentStepId,
       manualConfirmation: session.manualConfirmation,
@@ -82,6 +88,96 @@ class SessionManager extends EventEmitter {
     this.session.activePlan = plan ? normalizePlan(plan) : null;
     this.session.currentStepId = getCurrentStep(this.session.activePlan)?.id || null;
     this.session.manualConfirmation = null;
+    this.emitUpdate();
+  }
+
+  startBrowserExecution(execution) {
+    this.session.browserExecution = normalizeBrowserExecution(execution);
+    this.emitUpdate();
+    return this.session.browserExecution;
+  }
+
+  upsertBrowserExecutionSubstepStart(substep) {
+    if (!this.session.browserExecution) {
+      return null;
+    }
+
+    const nextSubstep = normalizeBrowserExecutionSubstep({
+      ...substep,
+      status: "running",
+      finishedAt: null,
+    });
+    const matchIndex = this.session.browserExecution.substeps.findIndex((entry) => (
+      (nextSubstep.id && entry.id === nextSubstep.id) ||
+      String(entry.stepNumber) === String(nextSubstep.stepNumber)
+    ));
+
+    if (matchIndex >= 0) {
+      this.session.browserExecution.substeps[matchIndex] = {
+        ...this.session.browserExecution.substeps[matchIndex],
+        ...nextSubstep,
+        status: "running",
+        finishedAt: null,
+      };
+    } else {
+      this.session.browserExecution.substeps.push(nextSubstep);
+    }
+
+    this.emitUpdate();
+    return nextSubstep;
+  }
+
+  upsertBrowserExecutionSubstepEnd(substep) {
+    if (!this.session.browserExecution) {
+      return null;
+    }
+
+    const nextStatus = substep?.status === "failed" ? "failed" : "done";
+    const nextSubstep = normalizeBrowserExecutionSubstep({
+      ...substep,
+      status: nextStatus,
+      finishedAt: substep?.finishedAt || new Date().toISOString(),
+    });
+    const matchIndex = this.session.browserExecution.substeps.findIndex((entry) => (
+      (nextSubstep.id && entry.id === nextSubstep.id) ||
+      String(entry.stepNumber) === String(nextSubstep.stepNumber)
+    ));
+
+    if (matchIndex >= 0) {
+      this.session.browserExecution.substeps[matchIndex] = {
+        ...this.session.browserExecution.substeps[matchIndex],
+        ...nextSubstep,
+        status: nextStatus,
+      };
+    } else {
+      this.session.browserExecution.substeps.push(nextSubstep);
+    }
+
+    this.emitUpdate();
+    return nextSubstep;
+  }
+
+  finishBrowserExecution({ status, finalMessage, finishedAt } = {}) {
+    if (!this.session.browserExecution) {
+      return null;
+    }
+
+    this.session.browserExecution = {
+      ...this.session.browserExecution,
+      status: status || this.session.browserExecution.status || "success",
+      finalMessage: finalMessage || "",
+      finishedAt: finishedAt || new Date().toISOString(),
+    };
+    this.emitUpdate();
+    return this.session.browserExecution;
+  }
+
+  emitBrowserExecutionSubstepProgress(progress) {
+    this.emit("browser-execution-substep-progress", progress || null);
+  }
+
+  clearBrowserExecution() {
+    this.session.browserExecution = null;
     this.emitUpdate();
   }
 
@@ -178,6 +274,7 @@ class SessionManager extends EventEmitter {
       messages: Array.isArray(snapshot.messages) ? snapshot.messages.slice() : [],
       goalIntent: snapshot.goalIntent || "",
       activePlan: snapshot.activePlan ? normalizePlan(snapshot.activePlan) : null,
+      browserExecution: snapshot.browserExecution ? normalizeBrowserExecution(snapshot.browserExecution) : null,
       currentStepId: snapshot.currentStepId || null,
       manualConfirmation: snapshot.manualConfirmation || null,
       lastScreenshots: Array.isArray(snapshot.lastScreenshots) ? snapshot.lastScreenshots.slice() : [],

@@ -34,6 +34,10 @@ const {
   normalizeSettingsForPlatform,
   resolveEffectiveTtsProvider,
 } = require("./src/platform-capabilities");
+const { registry } = require("./src/core/plugin-registry");
+const { BrowserPlugin } = require("./src/plugins/browser/index");
+const { resolveBrowserPluginLlmConfig } = require("./src/plugins/browser/llm-config");
+const { createBrowserExecutionTtsController } = require("./src/tts/browser-execution-tts");
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const PANEL_WIDTH  = 440;
@@ -48,6 +52,7 @@ const FAST_MODE_PROMPT = [
   "Always append a [POINT:x,y:label] tag when a clickable target is likely on screen.",
   "If uncertain, still provide your best click estimate with a concise label.",
 ].join(" ");
+const TERMINAL_BROWSER_EXECUTION_STATUSES = new Set(["success", "failed", "aborted"]);
 
 // ── Global state ──────────────────────────────────────────────────────────────
 let tray                 = null;
@@ -74,6 +79,25 @@ let isPlanShortcutInFlight = false;
 let panelOpenAnimationTimer = null;
 let lastPanelShowRequestAt = 0;
 let lastPushToTalkToggleAt = 0;
+let browserExecutionTts = null;
+
+const BROWSER_PLUGIN_RELEVANT_SETTINGS = new Set([
+  "aiProvider",
+  "aiModel",
+  "claudeApiKey",
+  "claudeModelCustom",
+  "openaiApiKey",
+  "openaiModelCustom",
+  "geminiApiKey",
+  "geminiModelCustom",
+  "groqApiKey",
+  "groqModelCustom",
+  "openrouterApiKey",
+  "openrouterModelCustom",
+  "ollamaModelCustom",
+  "browserAgentEnabled",
+  "browserHeadless",
+]);
 
 function getVirtualDisplayBounds() {
   const displays = screen.getAllDisplays();
@@ -213,6 +237,77 @@ async function getRuntimeSettings() {
   return applyPlatformSettingsGuards(hydrated).normalizedSettings;
 }
 
+function shouldRefreshBrowserPlugin(changedSettings = {}) {
+  return Object.keys(changedSettings || {}).some((key) => BROWSER_PLUGIN_RELEVANT_SETTINGS.has(key));
+}
+
+function emitBrowserAgentStatus(status) {
+  if (settingsWindow && !settingsWindow.isDestroyed()) {
+    settingsWindow.webContents.send("browser-agent-status-changed", status);
+  }
+  if (panelWindow && !panelWindow.isDestroyed()) {
+    panelWindow.webContents.send("browser-agent-status-changed", status);
+  }
+}
+
+function createBrowserPluginCrashHandler() {
+  return (err) => {
+    appLogger.error("browser-plugin-crashed", { error: err?.message });
+    emitBrowserAgentStatus(`crashed: ${err?.message}`);
+  };
+}
+
+function buildBrowserPluginConfig(runtimeSettings) {
+  const llmConfig = resolveBrowserPluginLlmConfig(runtimeSettings);
+  if (llmConfig.warning) {
+    appLogger.warn("browser-plugin-llm-model-adjusted", {
+      provider: llmConfig.llmProvider,
+      requestedModel: llmConfig.requestedModel,
+      warning: llmConfig.warning,
+    });
+  }
+  return {
+    headless: store.get("browserHeadless") === true,
+    llmProvider: llmConfig.llmProvider,
+    llmApiKey: llmConfig.llmApiKey,
+    llmModel: llmConfig.llmModel,
+    onCrash: createBrowserPluginCrashHandler(),
+  };
+}
+
+async function syncBrowserPluginWithRuntimeSettings(runtimeSettings, { forceRestart = false } = {}) {
+  let plugin;
+  try {
+    plugin = registry.getPlugin("browser");
+  } catch (_error) {
+    return { ok: false, skipped: true, error: "browser plugin is not registered" };
+  }
+
+  const browserEnabled = store.get("browserAgentEnabled") !== false;
+  if (!browserEnabled) {
+    try {
+      await plugin.shutdown();
+    } catch (err) {
+      appLogger.warn("browser-plugin-shutdown-error", { error: err?.message });
+    }
+    emitBrowserAgentStatus("stopped");
+    return { ok: true, enabled: false };
+  }
+
+  if (forceRestart) {
+    try {
+      await plugin.shutdown();
+    } catch (err) {
+      appLogger.warn("browser-plugin-restart-shutdown-error", { error: err?.message });
+    }
+  }
+
+  await plugin.initialize(buildBrowserPluginConfig(runtimeSettings));
+  const status = plugin._sidecar?.isRunning ? "running" : "stopped";
+  emitBrowserAgentStatus(status);
+  return { ok: true, enabled: true, status };
+}
+
 function attachWindowCrashHandlers(windowRef, name) {
   if (!windowRef || windowRef.isDestroyed()) {
     return;
@@ -267,6 +362,10 @@ function buildTrayIcon() {
     }
   }
   return nativeImage.createFromBuffer(data, { width: size, height: size });
+}
+
+function getApprovalWindow() {
+  return panelWindow && !panelWindow.isDestroyed() ? panelWindow : null;
 }
 
 // ── Panel window ──────────────────────────────────────────────────────────────
@@ -432,6 +531,16 @@ function broadcastSessionSnapshot(snapshot) {
 
   const widgetState = mapSessionStatusToWidgetState(snapshot.status);
   updateWidgetState(widgetState);
+}
+
+function broadcastBrowserExecutionSubstepProgress(progress) {
+  if (panelWindow && !panelWindow.isDestroyed()) {
+    panelWindow.webContents.send("execution:substep-progress", progress);
+  }
+
+  if (widgetWindow && !widgetWindow.isDestroyed()) {
+    widgetWindow.webContents.send("execution:substep-progress", progress);
+  }
 }
 
 function mapSessionStatusToWidgetState(status) {
@@ -773,7 +882,13 @@ function resolvePreferredTtsTargetSender(sender) {
   if (panelWindow && !panelWindow.isDestroyed()) {
     return panelWindow.webContents;
   }
-  return sender;
+  if (sender && typeof sender.isDestroyed === "function" && !sender.isDestroyed()) {
+    return sender;
+  }
+  if (widgetWindow && !widgetWindow.isDestroyed()) {
+    return widgetWindow.webContents;
+  }
+  return null;
 }
 
 async function ensureRuntimePermissions() {
@@ -845,9 +960,12 @@ function sanitizeTextForTts(input) {
   return text;
 }
 
-async function speakAssistantResponse(text, settings, sender) {
+async function speakAssistantResponse(text, settings, sender, { shouldAbort } = {}) {
   const safeText = sanitizeTextForTts(text);
   if (!settings.ttsEnabled || !safeText) {
+    return;
+  }
+  if (typeof shouldAbort === "function" && shouldAbort()) {
     return;
   }
 
@@ -864,15 +982,25 @@ async function speakAssistantResponse(text, settings, sender) {
   }
 
   const ttsTargetSender = resolvePreferredTtsTargetSender(sender);
+  if (!ttsTargetSender || (typeof ttsTargetSender.isDestroyed === "function" && ttsTargetSender.isDestroyed())) {
+    return;
+  }
   debugLog("tts:start", effectiveTtsProvider);
   if (effectiveTtsProvider === "elevenlabs") {
     updateWidgetState("speaking");
-    await speakWithElevenLabs(safeText, settings, ttsTargetSender);
+    if (typeof shouldAbort === "function" && shouldAbort()) {
+      return;
+    }
+    await speakWithElevenLabs(safeText, settings, ttsTargetSender, { shouldAbort });
   } else if (effectiveTtsProvider === "openai") {
     const openaiTTS = require("./src/tts/openai-tts");
     try {
       const base64Audio = await openaiTTS.speakText(safeText, settings);
-      if (base64Audio && !ttsTargetSender.isDestroyed()) {
+      if (
+        base64Audio
+        && !(typeof shouldAbort === "function" && shouldAbort())
+        && !ttsTargetSender.isDestroyed()
+      ) {
         updateWidgetState("speaking");
         ttsTargetSender.send("tts-start", base64Audio);
       }
@@ -883,7 +1011,11 @@ async function speakAssistantResponse(text, settings, sender) {
     const googleTTS = require("./src/tts/google-tts");
     try {
       const chunksBase64 = await googleTTS.speakText(safeText, settings);
-      if (chunksBase64.length > 0 && !ttsTargetSender.isDestroyed()) {
+      if (
+        chunksBase64.length > 0
+        && !(typeof shouldAbort === "function" && shouldAbort())
+        && !ttsTargetSender.isDestroyed()
+      ) {
         updateWidgetState("speaking");
         ttsTargetSender.send("tts-google", chunksBase64);
       }
@@ -892,7 +1024,10 @@ async function speakAssistantResponse(text, settings, sender) {
     }
   }
 
-  if (!ttsTargetSender.isDestroyed()) {
+  if (
+    !(typeof shouldAbort === "function" && shouldAbort())
+    && !ttsTargetSender.isDestroyed()
+  ) {
     ttsTargetSender.send("tts-done");
   }
   debugLog("tts:done", effectiveTtsProvider);
@@ -948,11 +1083,22 @@ function setupIPC() {
     const hydratedSettings = await secureStore.fillSecrets(store.store);
     const guardedHydrated = applyPlatformSettingsGuards(hydratedSettings);
     const settingsToBroadcast = guardedHydrated.normalizedSettings;
+    if (taskOrchestrator && typeof taskOrchestrator.setAwareAssistanceEnabled === "function") {
+      taskOrchestrator.setAwareAssistanceEnabled(settingsToBroadcast.awareAssistanceEnabled === true);
+    }
     if (panelWindow && !panelWindow.isDestroyed()) {
       panelWindow.webContents.send("settings-changed", settingsToBroadcast);
     }
     if (widgetWindow && !widgetWindow.isDestroyed()) {
       widgetWindow.webContents.send("settings-changed", settingsToBroadcast);
+    }
+    if (shouldRefreshBrowserPlugin(incomingSettings)) {
+      try {
+        await syncBrowserPluginWithRuntimeSettings(settingsToBroadcast, { forceRestart: true });
+      } catch (err) {
+        appLogger.error("browser-plugin-refresh-failed", { error: err?.message });
+        emitBrowserAgentStatus(`crashed: ${err?.message}`);
+      }
     }
     registerHotkeys();
     return {
@@ -974,6 +1120,9 @@ function setupIPC() {
     const hydratedSettings = await secureStore.fillSecrets(store.store);
     const guardedHydrated = applyPlatformSettingsGuards(hydratedSettings);
     const settingsToBroadcast = guardedHydrated.normalizedSettings;
+    if (taskOrchestrator && typeof taskOrchestrator.setAwareAssistanceEnabled === "function") {
+      taskOrchestrator.setAwareAssistanceEnabled(settingsToBroadcast.awareAssistanceEnabled === true);
+    }
     if (panelWindow && !panelWindow.isDestroyed()) {
       panelWindow.webContents.send("settings-changed", settingsToBroadcast);
     }
@@ -1316,7 +1465,9 @@ function setupIPC() {
     }
     try {
       // ── Pre-LLM layer: enrich prompt with OCR & window context ──
-      const layerManager = taskOrchestrator.interactionPipeline;
+      const layerManager = taskOrchestrator?.isAwareAssistanceEnabled?.()
+        ? taskOrchestrator.interactionPipeline
+        : null;
       let enrichedText = text;
       if (layerManager && Array.isArray(images) && images.length > 0) {
         try {
@@ -1417,7 +1568,13 @@ function setupIPC() {
   // ── Abort current AI request ──────────────────────────────────────────────
   ipcMain.handle("abort-message", () => {
     debugLog("ipc:abort-message");
-    if (currentAIController) { currentAIController.abort(); currentAIController = null; }
+    if (currentAIController) {
+      currentAIController.abort();
+      currentAIController = null;
+    }
+    if (taskOrchestrator && typeof taskOrchestrator.abortActiveExecution === "function") {
+      taskOrchestrator.abortActiveExecution();
+    }
   });
 
   // ── TTS ───────────────────────────────────────────────────────────────────
@@ -1557,10 +1714,67 @@ function setupIPC() {
     }
     updateWidgetState(state);
   });
+
+  // ── Browser Agent ─────────────────────────────────────────────────────────────
+  ipcMain.handle("restart-browser-agent", async () => {
+    debugLog("ipc:restart-browser-agent");
+    try {
+      const plugin = registry.getPlugin("browser");
+      const runtimeSettings = await getRuntimeSettings();
+      await plugin.shutdown();
+      await syncBrowserPluginWithRuntimeSettings(runtimeSettings, { forceRestart: false });
+      return { ok: true };
+    } catch (err) {
+      appLogger.error("restart-browser-agent-failed", { error: err });
+      return { ok: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle("get-browser-agent-status", () => {
+    try {
+      const status = registry.getStatus("browser");
+      if (status === "ok") {
+        const plugin = registry.getPlugin("browser");
+        return plugin._sidecar?.isRunning ? "running" : "stopped";
+      }
+      return status || "stopped";
+    } catch (_) {
+      return "stopped";
+    }
+  });
+
+  ipcMain.handle("download-browser-agent", async (event) => {
+    debugLog("ipc:download-browser-agent");
+    return new Promise((resolve) => {
+      const { spawn } = require("child_process");
+      const scriptPath = path.join(__dirname, "scripts", "download-browser-agent.js");
+      const child = spawn(process.execPath, [scriptPath], {
+        env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" },
+      });
+
+      child.stdout.on("data", (data) => {
+        const lines = data.toString().split("\n");
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const parsed = JSON.parse(line);
+            event.sender.send("browser-agent-download-progress", parsed);
+          } catch (e) {}
+        }
+      });
+
+      child.on("close", (code) => {
+        if (code === 0) resolve({ ok: true });
+        else resolve({ ok: false, error: `Exit code ${code}` });
+      });
+
+      child.on("error", (err) => resolve({ ok: false, error: err.message }));
+    });
+  });
 }
 
 // ── ElevenLabs TTS (direct API key) ──────────────────────────────────────────
-async function speakWithElevenLabs(text, settings, sender) {
+async function speakWithElevenLabs(text, settings, sender, { shouldAbort } = {}) {
   const url = `https://api.elevenlabs.io/v1/text-to-speech/${settings.elevenlabsVoiceId}`;
   const headers = {
     "Content-Type": "application/json",
@@ -1579,6 +1793,9 @@ async function speakWithElevenLabs(text, settings, sender) {
   }
 
   const arrayBuffer = await resp.arrayBuffer();
+  if (typeof shouldAbort === "function" && shouldAbort()) {
+    return;
+  }
   const base64Audio = Buffer.from(arrayBuffer).toString("base64");
   updateWidgetState("speaking");
   if (!sender.isDestroyed()) sender.send("tts-start", base64Audio);
@@ -1588,7 +1805,7 @@ async function speakWithElevenLabs(text, settings, sender) {
 }
 
 // ── App lifecycle ─────────────────────────────────────────────────────────────
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   app.setName("OpenGuider");
   initializeLogger({ app, level: process.env.OPENGUIDER_LOG_LEVEL || "info" });
   appLogger = createLogger("main");
@@ -1608,18 +1825,52 @@ app.whenReady().then(() => {
   taskOrchestrator = new TaskOrchestrator({
     captureAllScreens,
     sessionManager,
-    prePostLayersEnabled: true,
+    prePostLayersEnabled: store.get("awareAssistanceEnabled") === true,
+    getApprovalWindow,
+  });
+  browserExecutionTts = createBrowserExecutionTtsController({
+    getSettings: getRuntimeSettings,
+    speak: speakAssistantResponse,
+    getSender: () => resolvePreferredTtsTargetSender(null),
+    logger: (message, data) => appLogger.warn(message, data),
   });
   createTray();
   createPanelWindow();
   createCursorOverlay();
   createWidgetWindow();
+
+  // ── Register & initialize plugins [NEW] ───────────────────────────
+  try {
+    registry.register(new BrowserPlugin());
+    const runtimeSettings = await getRuntimeSettings();
+    const browserEnabled = store.get('browserAgentEnabled') !== false;
+    if (browserEnabled) {
+      registry.initializeAll(buildBrowserPluginConfig(runtimeSettings)).then(() => {
+        const status = registry.getStatus('browser') === 'ok' ? 'running' : 'stopped';
+        emitBrowserAgentStatus(status);
+      }).catch((err) => {
+        appLogger.error('plugin-init-failed', { error: err?.message });
+        emitBrowserAgentStatus(`crashed: ${err?.message}`);
+      });
+    } else {
+      emitBrowserAgentStatus("stopped");
+    }
+  } catch (err) {
+    appLogger.error('plugin-registration-failed', { error: err?.message });
+  }
   sessionManager.on("updated", (snapshot) => {
     saveSessionSnapshot(store, snapshot);
     if (Array.isArray(snapshot?.lastScreenshots) && snapshot.lastScreenshots.length > 0) {
       updatePointerCalibration(snapshot.lastScreenshots);
     }
+    if (!snapshot?.browserExecution || TERMINAL_BROWSER_EXECUTION_STATUSES.has(snapshot.browserExecution.status)) {
+      browserExecutionTts?.invalidate();
+    }
     broadcastSessionSnapshot(snapshot);
+  });
+  sessionManager.on("browser-execution-substep-progress", (progress) => {
+    broadcastBrowserExecutionSubstepProgress(progress);
+    void browserExecutionTts?.handleSubstepProgress(progress);
   });
   broadcastSessionSnapshot(sessionManager.getSnapshot());
   setupIPC();
@@ -1642,6 +1893,26 @@ app.on("second-instance", () => {
       showPanel();
     }
   });
+});
+
+// ── Graceful shutdown with plugin cleanup [NEW] ──────────────────────
+app.on("before-quit", (e) => {
+  // Prevent quit, run async cleanup, then re-quit
+  if (app._pluginsShutdown) return; // second time through — really quit
+  e.preventDefault();
+  app._pluginsShutdown = true;
+
+  const shutdownTimeout = setTimeout(() => {
+    appLogger.warn('plugin-shutdown-forced');
+    app.quit();
+  }, 5000);
+
+  registry.shutdownAll()
+    .catch((err) => appLogger.error('shutdown-error', { error: err?.message }))
+    .finally(() => {
+      clearTimeout(shutdownTimeout);
+      app.quit();
+    });
 });
 
 app.on("will-quit", () => {

@@ -17,7 +17,7 @@ Download [here](https://mo-tunn.github.io/OpenGuider/)
 
 OpenGuider is an Electron desktop AI assistant designed to help you complete real UI tasks on your machine.
 
-It combines chat, planning, screenshot context, pointer hints, and optional voice features in one desktop workflow.
+It combines chat, planning, screenshot context, pointer hints, optional voice features, and a growing plugin system in one desktop workflow.
 
 ## Quick Configuration Guides (PDF)
 
@@ -29,6 +29,7 @@ It combines chat, planning, screenshot context, pointer hints, and optional voic
 - Converts your goal into a step-by-step execution plan.
 - Uses screenshot context to reason about what is currently on screen.
 - Gives coordinate-based pointer guidance for "click here" style help.
+- Routes compatible tasks into plugins when a specialized workspace is available.
 - Keeps session history so long tasks remain coherent across messages.
 - Supports multiple model providers so you can switch based on speed/cost/quality.
 - Adds optional speech-to-text and text-to-speech for hands-free usage.
@@ -88,6 +89,20 @@ Text-to-speech options:
 
 You can run chat-only, voice-only, or hybrid flows depending on your setup.
 
+### 5) Plugin System and Browser Automation
+
+OpenGuider now has a plugin layer so specialized workspaces can plug into the desktop assistant over time.
+
+Today, the first live plugin is the Browser plugin. It uses `browser-use` under the hood and can:
+
+- open and navigate websites,
+- fill forms and follow multi-step browser tasks,
+- show live execution progress in the panel and widget,
+- pause for approval on risky actions,
+- or continue in autopilot mode when you want it to run automatically.
+
+This matters because browser automation is now a feature inside a broader plugin system, not a one-off hardcoded mode. More plugins can be added later without changing the overall OpenGuider workflow.
+
 ## Live Preview
 
 <p align="center">
@@ -112,6 +127,9 @@ You can run chat-only, voice-only, or hybrid flows depending on your setup.
    - macOS: `OpenGuider-macos-installer-latest.dmg`
    - Linux: `OpenGuider-linux-latest.zip`
 3. Extract and run the app.
+4. If you want browser automation, open `Settings -> Plugins`.
+5. In the Browser plugin card, click `Download Runtime` once.
+6. Choose whether browser tasks should run with approval or in autopilot mode.
 
 ### Option B: Run From Source
 
@@ -182,6 +200,11 @@ Send a simple prompt first, for example:
 Then try a planning-style prompt:
 
 - "Help me complete this task in 5 steps and wait for confirmation after each step."
+
+Then try a plugin-style prompt:
+
+- "Search the web for the official OpenAI API docs and pause before opening any sign-in page."
+- "Use the browser plugin to find a product page, but ask me before submitting or checking out."
 
 ### Step 5: Add Secondary Providers (Optional)
 
@@ -325,6 +348,7 @@ flowchart LR
   Main[main.js\nElectron Main Process]
   Agent[src/agent/*\nPlanner + Orchestrator]
   AI[src/ai/*\nProvider Clients]
+  Plugins[src/plugins/*\nPlugin Registry + Browser Plugin]
   Session[src/session/*\nSession State + Persistence]
   Screen[src/screenshot.js\nScreen Capture]
   Voice[src/tts/* + STT adapters]
@@ -334,6 +358,8 @@ flowchart LR
   Preload --> Main
   Main --> Agent
   Agent --> AI
+  Main --> Plugins
+  Agent --> Plugins
   Agent <--> Session
   Main --> Screen
   Main --> Voice
@@ -347,6 +373,7 @@ flowchart LR
 - `renderer/*`: user-facing UI surfaces (panel, widget, settings, cursor overlay).
 - `src/agent/*`: planning, evaluation, replanning, and task progression logic.
 - `src/ai/*`: model-provider abstractions and structured response handling.
+- `src/plugins/*`: plugin registry plus specialized execution surfaces such as the Browser plugin.
 - `src/session/*`: session model, history continuity, state persistence.
 
 ## Security Notes

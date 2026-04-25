@@ -439,7 +439,7 @@ function stopShortcutRecording(button) {
 }
 
 function bindShortcutRecordButtons() {
-  const recordButtons = [...document.querySelectorAll(".record-shortcut-btn")];
+  const recordButtons = [...document.querySelectorAll(".record-shortcut-btn[data-target-input]")];
   document.addEventListener("keydown", (event) => {
     if (!recordingButton) return;
     event.preventDefault();

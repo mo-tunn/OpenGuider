@@ -257,6 +257,21 @@ function createBrowserPluginCrashHandler() {
   };
 }
 
+function resolveChildProcessAssetPath(...segments) {
+  const directPath = path.join(__dirname, ...segments);
+  const asarSegment = `${path.sep}app.asar${path.sep}`;
+  if (!directPath.includes(asarSegment)) {
+    return directPath;
+  }
+
+  const unpackedPath = directPath.replace(asarSegment, `${path.sep}app.asar.unpacked${path.sep}`);
+  return fs.existsSync(unpackedPath) ? unpackedPath : directPath;
+}
+
+function getBrowserRuntimeInstallDir() {
+  return path.join(app.getPath("userData"), "python-runtime");
+}
+
 function buildBrowserPluginConfig(runtimeSettings) {
   const llmConfig = resolveBrowserPluginLlmConfig(runtimeSettings);
   if (llmConfig.warning) {
@@ -1747,9 +1762,14 @@ function setupIPC() {
     debugLog("ipc:download-browser-agent");
     return new Promise((resolve) => {
       const { spawn } = require("child_process");
-      const scriptPath = path.join(__dirname, "scripts", "download-browser-agent.js");
-      const child = spawn(process.execPath, [scriptPath], {
-        env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" },
+      const scriptPath = resolveChildProcessAssetPath("scripts", "download-browser-agent.js");
+      const targetDir = getBrowserRuntimeInstallDir();
+      const child = spawn(process.execPath, [scriptPath, "--target", targetDir], {
+        env: {
+          ...process.env,
+          ELECTRON_RUN_AS_NODE: "1",
+          OPENGUIDER_BROWSER_RUNTIME_DIR: targetDir,
+        },
       });
 
       child.stdout.on("data", (data) => {
@@ -1763,9 +1783,20 @@ function setupIPC() {
         }
       });
 
-      child.on("close", (code) => {
-        if (code === 0) resolve({ ok: true });
-        else resolve({ ok: false, error: `Exit code ${code}` });
+      child.on("close", async (code) => {
+        if (code === 0) {
+          try {
+            const runtimeSettings = await getRuntimeSettings();
+            await syncBrowserPluginWithRuntimeSettings(runtimeSettings, { forceRestart: true });
+            resolve({ ok: true, targetDir });
+          } catch (err) {
+            appLogger.error("download-browser-agent-restart-failed", { error: err?.message });
+            resolve({ ok: false, error: err?.message || "Runtime downloaded but restart failed" });
+          }
+          return;
+        }
+
+        resolve({ ok: false, error: `Exit code ${code}` });
       });
 
       child.on("error", (err) => resolve({ ok: false, error: err.message }));

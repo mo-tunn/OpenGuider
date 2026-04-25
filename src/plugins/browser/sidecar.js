@@ -6,6 +6,8 @@
 
 const { EventEmitter } = require('events');
 const { spawn } = require('child_process');
+const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { createLogger } = require('../../logger');
 
@@ -14,6 +16,80 @@ const logger = createLogger('sidecar');
 const HEALTH_POLL_MS     = 300;   // initial poll interval
 const HEALTH_MAX_WAIT_MS = 15000; // maximum time to wait for /health
 const SHUTDOWN_TIMEOUT_MS = 3000;
+
+function resolveChildProcessAssetPath(filePath) {
+  const asarSegment = `${path.sep}app.asar${path.sep}`;
+  if (!String(filePath || '').includes(asarSegment)) {
+    return filePath;
+  }
+
+  const unpackedPath = filePath.replace(asarSegment, `${path.sep}app.asar.unpacked${path.sep}`);
+  return fs.existsSync(unpackedPath) ? unpackedPath : filePath;
+}
+
+function getDefaultBrowserRuntimeDir() {
+  const explicitDir = process.env.OPENGUIDER_BROWSER_RUNTIME_DIR;
+  if (explicitDir) {
+    return explicitDir;
+  }
+
+  try {
+    const { app } = require('electron');
+    if (typeof app?.getPath === 'function') {
+      return path.join(app.getPath('userData'), 'python-runtime');
+    }
+  } catch (_) {}
+
+  return path.join(os.homedir(), '.openguider', 'python-runtime');
+}
+
+function getInstalledRuntimeInfo() {
+  const candidates = [
+    getDefaultBrowserRuntimeDir(),
+    path.join(os.homedir(), '.openguider', 'python-runtime'),
+    process.resourcesPath ? path.join(process.resourcesPath, 'python-runtime') : '',
+  ].filter(Boolean);
+
+  for (const runtimeDir of [...new Set(candidates)]) {
+    const manifestPath = path.join(runtimeDir, 'manifest.json');
+    let manifest = null;
+
+    if (fs.existsSync(manifestPath)) {
+      try {
+        manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+      } catch (_) {
+        manifest = null;
+      }
+    }
+
+    const pythonBinCandidates = [
+      manifest?.pythonBin,
+      path.join(runtimeDir, 'python', process.platform === 'win32' ? 'python.exe' : path.join('bin', 'python3')),
+      path.join(runtimeDir, process.platform === 'win32' ? 'python.exe' : 'python'),
+    ].filter(Boolean);
+
+    const pythonBin = pythonBinCandidates.find((candidate) => fs.existsSync(candidate));
+    if (!pythonBin) {
+      continue;
+    }
+
+    const playwrightBrowsersPathCandidates = [
+      manifest?.playwrightBrowsersPath,
+      path.join(runtimeDir, 'playwright-browsers'),
+    ].filter(Boolean);
+
+    const playwrightBrowsersPath = playwrightBrowsersPathCandidates.find((candidate) => fs.existsSync(candidate)) || '';
+
+    return {
+      runtimeDir,
+      manifest,
+      pythonBin,
+      playwrightBrowsersPath,
+    };
+  }
+
+  return null;
+}
 
 class SidecarStartupError extends Error {
   constructor(message) {
@@ -51,8 +127,9 @@ class Sidecar extends EventEmitter {
     this._port         = port;
     this._callbackPort = callbackPort;
 
-    const pythonBin  = this._resolvePythonBin();
-    const scriptPath = path.join(__dirname, 'python', 'agent_server.py');
+    const runtimeInfo = getInstalledRuntimeInfo();
+    const pythonBin  = runtimeInfo?.pythonBin || this._resolvePythonBin();
+    const scriptPath = resolveChildProcessAssetPath(path.join(__dirname, 'python', 'agent_server.py'));
 
     logger.info('sidecar-starting', { pythonBin, port, callbackPort });
 
@@ -61,6 +138,7 @@ class Sidecar extends EventEmitter {
         ...process.env,
         PORT:          String(port),
         CALLBACK_PORT: String(callbackPort),
+        PLAYWRIGHT_BROWSERS_PATH: runtimeInfo?.playwrightBrowsersPath || process.env.PLAYWRIGHT_BROWSERS_PATH || '',
         ...envOverrides,
       },
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -181,6 +259,11 @@ class Sidecar extends EventEmitter {
    * @returns {string}
    */
   _resolvePythonBin() {
+    const runtimeInfo = getInstalledRuntimeInfo();
+    if (runtimeInfo?.pythonBin) {
+      return runtimeInfo.pythonBin;
+    }
+
     // Lazy-require to avoid importing Electron in tests
     let isPackaged = false;
     try {
@@ -257,4 +340,10 @@ class Sidecar extends EventEmitter {
   }
 }
 
-module.exports = { Sidecar, SidecarStartupError };
+module.exports = {
+  Sidecar,
+  SidecarStartupError,
+  getDefaultBrowserRuntimeDir,
+  getInstalledRuntimeInfo,
+  resolveChildProcessAssetPath,
+};

@@ -1,6 +1,6 @@
 {
   "name": "openguider",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "OpenGuider AI Companion",
   "author": "Metehan Kızılcık",
   "license": "Apache-2.0",
@@ -40,6 +40,10 @@
     "productName": "OpenGuider",
     "icon": "renderer/assets/logo.ico",
     "asar": true,
+    "asarUnpack": [
+      "scripts/**/*",
+      "src/plugins/browser/python/**/*"
+    ],
     "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
     "directories": {
       "output": "release"

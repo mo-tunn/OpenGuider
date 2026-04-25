@@ -88,12 +88,16 @@ function downloadFile(url, destPath) {
 
 function runCmd(cmd, args, cwd, logLabel) {
   return new Promise((resolve, reject) => {
+    let stderr = '';
     const child = spawn(cmd, args, { cwd, stdio: ['ignore', 'pipe', 'pipe'] });
     child.stdout.on('data', (d) => process.stderr.write(`[${logLabel}] ${d}`));
-    child.stderr.on('data', (d) => process.stderr.write(`[${logLabel}:stderr] ${d}`));
+    child.stderr.on('data', (d) => {
+      stderr += d.toString();
+      process.stderr.write(`[${logLabel}:stderr] ${d}`);
+    });
     child.on('exit', (code) => {
       if (code === 0) resolve();
-      else reject(new Error(`${cmd} exited with code ${code}`));
+      else reject(new Error(`${cmd} exited with code ${code}${stderr.trim() ? `: ${stderr.trim()}` : ''}`));
     });
     child.on('error', reject);
   });
@@ -155,6 +159,7 @@ async function main() {
   // ── 4. Install pip dependencies ──────────────────────────────────────────
   progress('Installing browser-use and dependencies…', 58);
   const requirementsPath = path.join(__dirname, '..', 'src', 'plugins', 'browser', 'python', 'requirements.txt');
+  await runCmd(pythonBin, ['-m', 'ensurepip', '--upgrade'], targetDir, 'ensurepip');
   await runCmd(pythonBin, ['-m', 'pip', 'install', '--upgrade', 'pip'], targetDir, 'pip-upgrade');
   await runCmd(
     pythonBin,
@@ -183,6 +188,7 @@ async function main() {
   const manifest = {
     version:    PYTHON_VERSION,
     platform,
+    targetDir,
     pythonBin,
     playwrightBrowsersPath,
     installedAt: new Date().toISOString(),

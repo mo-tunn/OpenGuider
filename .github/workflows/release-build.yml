@@ -10,6 +10,12 @@ jobs:
   build:
     name: Build on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    env:
+      npm_config_fetch_retries: "5"
+      npm_config_fetch_retry_mintimeout: "20000"
+      npm_config_fetch_retry_maxtimeout: "120000"
+      ELECTRON_CACHE: ${{ github.workspace }}/.cache/electron
+      ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/.cache/electron-builder
     strategy:
       fail-fast: false
       matrix:
@@ -25,8 +31,48 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Cache Electron binaries
+        uses: actions/cache@v4
+        with:
+          path: |
+            .cache/electron
+            .cache/electron-builder
+          key: ${{ runner.os }}-electron-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-electron-
+
       - name: Install dependencies
-        run: npm ci --omit=optional
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $maxAttempts = 3
+
+          for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+            try {
+              Write-Host "npm ci attempt $attempt/$maxAttempts"
+              npm ci --omit=optional
+              if ($LASTEXITCODE -eq 0) {
+                Write-Host "npm ci completed successfully"
+                break
+              }
+
+              throw "npm ci exited with code $LASTEXITCODE"
+            } catch {
+              if ($attempt -eq $maxAttempts) {
+                throw
+              }
+
+              Write-Warning "npm ci failed on attempt $attempt. Clearing partial Electron downloads and retrying..."
+              if (Test-Path node_modules) {
+                Remove-Item node_modules -Recurse -Force -ErrorAction SilentlyContinue
+              }
+              if (Test-Path $env:ELECTRON_CACHE) {
+                Remove-Item $env:ELECTRON_CACHE -Recurse -Force -ErrorAction SilentlyContinue
+              }
+
+              Start-Sleep -Seconds (15 * $attempt)
+            }
+          }
 
       - name: Build Windows installer
         if: matrix.os == 'windows-latest'

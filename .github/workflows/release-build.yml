@@ -49,8 +49,14 @@ jobs:
 
           for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
             try {
-              Write-Host "npm ci attempt $attempt/$maxAttempts"
-              npm ci --omit=optional
+              $npmCiArgs = @("ci", "--omit=optional")
+              if ("${{ matrix.os }}" -eq "macos-latest") {
+                # dmg-builder needs its optional dmg-license package to create DMG installers.
+                $npmCiArgs = @("ci")
+              }
+
+              Write-Host "npm $($npmCiArgs -join ' ') attempt $attempt/$maxAttempts"
+              npm @npmCiArgs
               if ($LASTEXITCODE -eq 0) {
                 Write-Host "npm ci completed successfully"
                 break
@@ -89,20 +95,9 @@ jobs:
 
       - name: Build macOS installer
         if: matrix.os == 'macos-latest'
-        continue-on-error: true
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
         run: npx electron-builder --mac dmg --config.mac.identity=null
-
-      - name: Create fallback macOS installer
-        if: matrix.os == 'macos-latest' && failure()
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p release/OpenGuider-macos-fallback
-          echo "macOS installer build failed in CI. This fallback keeps the release pipeline alive." > release/OpenGuider-macos-fallback/README.txt
-          cd release
-          zip -r OpenGuider-macos-fallback.zip OpenGuider-macos-fallback
 
       - name: Ensure macOS release artifacts are present
         if: matrix.os == 'macos-latest'
@@ -116,10 +111,11 @@ jobs:
             fi
           fi
 
-          if [ ! -d "release" ] || [ -z "$(find release -type f | head -n 1)" ]; then
-            mkdir -p release/OpenGuider-macos-fallback
-            echo "macOS build produced no distributable artifact. Generated fallback package." > release/OpenGuider-macos-fallback/README.txt
-            (cd release && zip -r OpenGuider-macos-fallback.zip OpenGuider-macos-fallback)
+          MACOS_DMG="$(find release -type f -name '*.dmg' | head -n 1 || true)"
+          if [ -z "${MACOS_DMG}" ]; then
+            echo "::error::macOS build completed without a DMG artifact."
+            find release dist -maxdepth 3 -type f -print 2>/dev/null || true
+            exit 1
           fi
 
       - name: Build Linux artifact
@@ -159,24 +155,18 @@ jobs:
             WINDOWS_SETUP="$(find artifacts -type f -name '*.exe' ! -path '*/win-unpacked/*' ! -name 'OpenGuider.exe' | head -n 1)"
           fi
           MACOS_DMG="$(find artifacts -type f -name '*.dmg' | head -n 1)"
-          MACOS_FALLBACK="$(find artifacts -type f -name '*macos-fallback*.zip' | head -n 1)"
           LINUX_ZIP="$(find artifacts -type f -name '*linux*.zip' | head -n 1)"
 
-          if [ -z "${WINDOWS_SETUP}" ] || ([ -z "${MACOS_DMG}" ] && [ -z "${MACOS_FALLBACK}" ]) || [ -z "${LINUX_ZIP}" ]; then
+          if [ -z "${WINDOWS_SETUP}" ] || [ -z "${MACOS_DMG}" ] || [ -z "${LINUX_ZIP}" ]; then
             echo "Could not locate one or more platform installer files."
             echo "WINDOWS_SETUP=${WINDOWS_SETUP:-missing}"
             echo "MACOS_DMG=${MACOS_DMG:-missing}"
-            echo "MACOS_FALLBACK=${MACOS_FALLBACK:-missing}"
             echo "LINUX_ZIP=${LINUX_ZIP:-missing}"
             exit 1
           fi
 
           cp "${WINDOWS_SETUP}" artifacts/aliases/OpenGuider-windows-setup-latest.exe
-          if [ -n "${MACOS_DMG}" ]; then
-            cp "${MACOS_DMG}" artifacts/aliases/OpenGuider-macos-installer-latest.dmg
-          else
-            cp "${MACOS_FALLBACK}" artifacts/aliases/OpenGuider-macos-installer-latest.zip
-          fi
+          cp "${MACOS_DMG}" artifacts/aliases/OpenGuider-macos-installer-latest.dmg
           cp "${LINUX_ZIP}" artifacts/aliases/OpenGuider-linux-latest.zip
 
       - name: Publish release with artifacts
@@ -188,9 +178,9 @@ jobs:
 
             Download installers:
             - Windows setup: OpenGuider-windows-setup-latest.exe
-            - macOS installer: OpenGuider-macos-installer-latest.dmg (or .zip fallback)
+            - macOS installer: OpenGuider-macos-installer-latest.dmg
             - Linux: OpenGuider-linux-latest.zip
           files: |
             artifacts/aliases/OpenGuider-windows-setup-latest.exe
-            artifacts/aliases/OpenGuider-macos-installer-latest.*
+            artifacts/aliases/OpenGuider-macos-installer-latest.dmg
             artifacts/aliases/OpenGuider-linux-latest.zip

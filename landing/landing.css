@@ -121,6 +121,20 @@ a {
   background: rgba(198, 90, 58, 0.14);
 }
 
+.nav-link-guider {
+  border-color: #ad482b;
+  color: #fff;
+  background: #ad482b;
+  font-weight: 700;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+}
+
+.nav-link-guider:hover {
+  border-color: #e58b6d;
+  color: #fff;
+  background: #923a22;
+}
+
 .hero {
   position: relative;
   padding: 74px 0 34px;
@@ -982,6 +996,73 @@ body.hero-scroll-motion-enabled.hero-entrance-done .hero[data-scroll-dir="up"] .
 
 .hero-downloads::before {
   content: none;
+}
+
+.guider-promo {
+  width: min(980px, 100%);
+  margin: 0 auto;
+  padding: 24px 28px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 28px;
+  border: 1px solid rgba(198, 90, 58, 0.56);
+  border-radius: 14px;
+  background: linear-gradient(120deg, rgba(64, 26, 17, 0.92), rgba(13, 13, 13, 0.97) 58%);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(198, 90, 58, 0.08);
+}
+
+.guider-promo-copy h2 {
+  margin: 0 0 10px;
+  color: #f2e4dd;
+  font-size: clamp(23px, 2.3vw, 30px);
+  line-height: 1.2;
+  letter-spacing: 0.2px;
+  text-align: left;
+}
+
+.guider-promo-copy p {
+  max-width: 72ch;
+  margin: 0;
+  color: #d1b8ac;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.guider-promo-link {
+  min-height: 48px;
+  padding: 12px 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1px solid #ad482b;
+  border-radius: var(--radius);
+  color: #fff;
+  background: #ad482b;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
+}
+
+.guider-promo-link svg {
+  width: 16px;
+  height: 16px;
+}
+
+.guider-promo-link:hover {
+  transform: translateY(-1px);
+  border-color: #e58b6d;
+  background: #923a22;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.32);
+}
+
+.nav-link-guider:focus-visible,
+.guider-promo-link:focus-visible {
+  outline: 3px solid #f2c2ae;
+  outline-offset: 4px;
 }
 
 .hero-downloads-label {
@@ -2920,6 +3001,16 @@ h2 {
     flex-wrap: wrap;
     row-gap: 6px;
     border-radius: 14px;
+  }
+
+  .guider-promo {
+    grid-template-columns: 1fr;
+    gap: 18px;
+    padding: 20px;
+  }
+
+  .guider-promo-link {
+    width: 100%;
   }
 
   .feature-grid {

@@ -1,3 +1,41 @@
+---
+
+<div align="center">
+
+<h2>Meet Guider — A More Advanced Desktop AI Experience</h2>
+
+<p><strong>Go beyond open-source desktop assistance.</strong></p>
+
+<p>
+Guider is a separate, private commercial product designed for a more focused and advanced desktop AI workflow — combining screen-aware guidance, Codex-powered reasoning, explicit computer execution, and optional local voice features.
+</p>
+
+<a href="https://guider.click/">
+  <img src="https://img.shields.io/badge/DISCOVER-GUIDER-6C63FF?style=for-the-badge" alt="Discover Guider">
+</a>
+<a href="https://guider.click/">
+  <img src="https://img.shields.io/badge/PRE--REGISTRATION-OPEN-2EA44F?style=for-the-badge" alt="Preregistration Open">
+</a>
+
+<br/>
+
+**OpenGuider** — Open source · Multi-provider · Extensible
+
+**Guider** — Private product · Codex-powered · Focused desktop execution
+
+<p>
+<a href="https://guider.click/"><strong>Explore Guider and join the preregistration list →</strong></a>
+</p>
+
+<sub>Guider is a separate commercial product, not a paid version distributed through this repository.</sub>
+
+</div>
+
+---
+
+
+
+
 # OpenGuider
 
 Download [here](https://mo-tunn.github.io/OpenGuider/)
